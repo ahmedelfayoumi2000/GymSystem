@@ -53,7 +53,7 @@ namespace GymSystem.API.Extentions
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<INutritionPlanRepo, NutritionPlanRepo>();
             //services.AddScoped<IExerciseCategoryRepo, ExerciseCategoryRepo>();
-            //services.AddScoped<IClassRepo, ClassRepo>();
+            services.AddScoped<IClassRepo, ClassRepository>();
             //services.AddScoped<IWorkoutPlanRepo, WorkoutPlanRepo>();
             //services.AddScoped<IExerciseRepo, ExerciseRepo>();
             //services.AddScoped<IMealsCategoryRepo, MealsCategoryRepo>();

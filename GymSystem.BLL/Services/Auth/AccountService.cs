@@ -177,6 +177,7 @@ namespace GymSystem.BLL.Services.Auth
                 var otp = _otpService.GenerateOtp(email);
                 var emailBody = $"<h1>Your Verification Code is: {otp}</h1><p>Use this code to reset your password. It expires in 5 minutes.</p>";
 
+                _logger.LogInformation("Attempting to send OTP email to {Email}", email);
                 await SendEmailAsync(email, "Verification Code", emailBody);
                 _logger.LogInformation("Password reset OTP sent to {Email}", email);
 
@@ -185,7 +186,7 @@ namespace GymSystem.BLL.Services.Auth
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending forget password email to {Email}", email);
-                return new ApiResponse(400, $"Failed to send reset email: {ex.Message}");
+                return new ApiResponse(500, $"Failed to send reset email: {ex.Message}");
             }
         }
 
@@ -315,7 +316,7 @@ namespace GymSystem.BLL.Services.Auth
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error resending confirmation email to {Email}", email);
-                return new ApiResponse(500, $"An error occurred: {ex.Message}");
+                return new ApiResponse(500, $"Failed to resend confirmation email: {ex.Message}");
             }
         }
 
@@ -376,15 +377,19 @@ namespace GymSystem.BLL.Services.Auth
                 message.Body = new TextPart("html") { Text = body };
 
                 using var client = new MailKit.Net.Smtp.SmtpClient();
+                _logger.LogInformation("Connecting to SMTP server {Server}:{Port}", _mailSettings.SmtpServer, _mailSettings.Port);
                 await client.ConnectAsync(_mailSettings.SmtpServer, _mailSettings.Port, SecureSocketOptions.StartTls, cancellation);
+                _logger.LogInformation("Authenticating with email {Email}", _mailSettings.Email);
                 await client.AuthenticateAsync(_mailSettings.Email, _mailSettings.Password, cancellation);
                 await client.SendAsync(message, cancellation);
                 await client.DisconnectAsync(true, cancellation);
+
+                _logger.LogInformation("Email sent successfully to {To} with subject: {Subject}", to, subject);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error sending email to {To} with subject: {Subject}", to, subject);
-                throw;
+                _logger.LogError(ex, "Failed to send email to {To} with subject: {Subject}", to, subject);
+                throw new Exception($"Failed to send email: {ex.Message}", ex);
             }
         }
         #endregion
@@ -443,7 +448,7 @@ namespace GymSystem.BLL.Services.Auth
 
         private string BuildEmailBody(string username, string callbackUrl)
         {
-            return $"<h1>Dear {username}! Welcome to FORMA GYM.</h1>" +
+            return $"<h1>Dear {username}! Welcome to ATHLETIC GYM.</h1>" +
                    $"<p>Please <a href='{callbackUrl}'>Click Here</a> to confirm your email.</p>";
         }
         #endregion

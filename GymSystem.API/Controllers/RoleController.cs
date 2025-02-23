@@ -1,5 +1,4 @@
-﻿
-using GymSystem.BLL.Dtos.Role;
+﻿using GymSystem.BLL.Dtos.Role;
 using GymSystem.BLL.Dtos;
 using GymSystem.BLL.Errors;
 using GymSystem.DAL.Entities.Enums.Auth;
@@ -14,7 +13,7 @@ namespace GymMangamentSystem.Apis.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class RoleController : ControllerBase
     {
         private readonly RoleManager<IdentityRole> _roleManager;

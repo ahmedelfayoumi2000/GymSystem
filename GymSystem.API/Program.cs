@@ -101,8 +101,7 @@ try
 
 
     var userManager = services.GetRequiredService<UserManager<AppUser>>();
-    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
-    //await AppIdentityDbContextSeed.SeedAsync(userManager, roleManager);
+    await AppIdentityDbContextSeed.SeedAsync(userManager);
 }
 catch (Exception ex)
 {

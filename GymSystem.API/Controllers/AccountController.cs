@@ -8,16 +8,19 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Microsoft.Extensions.Configuration;
+using GymSystem.BLL.Services.Auth;
 namespace GymSystem.API.Controllers
 {
     public class AccountController : BaseApiController
     {
         private readonly IAccountService _accountService;
         private readonly IConfiguration _configuration;
-        public AccountController(IAccountService accountService, IConfiguration configuration)
+        private readonly ILogger<AccountService> _logger;
+        public AccountController(IAccountService accountService, IConfiguration configuration, ILogger<AccountService> logger)
         {
             _accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         [HttpPost("login")]
@@ -54,21 +57,24 @@ namespace GymSystem.API.Controllers
         }
 
         [HttpPost("forget-password")]
-        public async Task<IActionResult> ForgetPassword(string email)
+        public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordRequest request)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                _logger.LogWarning("Invalid model state for ForgetPassword with Email: {Email}", request?.Email);
+                return BadRequest(new ApiValidationErrorResponse
+                {
+                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList(),
+                    StatusCode = 400,
+                    Message = "Bad Request, You Have Made"
+                });
             }
-            var result = await _accountService.ForgetPassword(email);
-            if (result.StatusCode == 400)
-            {
-                return BadRequest(result);
-            }
-            return Ok(result);
+
+            var result = await _accountService.ForgetPassword(request.Email);
+            return result.StatusCode == 400 ? BadRequest(result) : Ok(result);
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpPost("verify-otp")]
         public IActionResult VerifyOtp(VerifyOtp dto)
         {
@@ -84,7 +90,7 @@ namespace GymSystem.API.Controllers
             return Ok(result);
         }
 
-        [Authorize]
+        //[Authorize]
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(ResetPassword dto)
         {
@@ -130,18 +136,21 @@ namespace GymSystem.API.Controllers
         }
 
         [HttpPost("resend-confirmation-email")]
-        public async Task<IActionResult> ResendConfirmationEmail(string email)
+        public async Task<IActionResult> ResendConfirmationEmail([FromBody] ResendConfirmationEmailRequest request)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                _logger.LogWarning("Invalid model state for ResendConfirmationEmail with Email: {Email}", request?.Email);
+                return BadRequest(new ApiValidationErrorResponse
+                {
+                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList(),
+                    StatusCode = 400,
+                    Message = "Bad Request, You Have Made"
+                });
             }
-            var result = await _accountService.ResendConfirmationEmailAsync(email, GenerateCallBackUrl);
-            if (result.StatusCode == 400)
-            {
-                return BadRequest(result);
-            }
-            return Ok(result);
+
+            var result = await _accountService.ResendConfirmationEmailAsync(request.Email, GenerateCallBackUrl);
+            return result.StatusCode == 400 ? BadRequest(result) : Ok(result);
         }
 
         [HttpGet("confirm-email")]

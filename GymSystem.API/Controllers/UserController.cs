@@ -124,7 +124,7 @@ namespace GymMangamentSystem.Apis.Controllers
             }
         }
 
-      
+
         [HttpPut("users/roles/{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -134,10 +134,12 @@ namespace GymMangamentSystem.Apis.Controllers
         {
             if (!ModelState.IsValid)
             {
-                _logger.LogWarning("Invalid model state for UpdateUserRoles with ID: {UserId}", id);
+                _logger.LogWarning("Invalid model state for UpdateUserRoles with UserId: {UserId}", id);
                 return BadRequest(new ApiValidationErrorResponse
                 {
-                    Errors = ModelState.Values.SelectMany(x => x.Errors.Select(e => e.ErrorMessage))
+                    Errors = ModelState.Values.SelectMany(x => x.Errors.Select(e => e.ErrorMessage)).ToList(),
+                    StatusCode = 400,
+                    Message = "Bad Request, Invalid Data Provided"
                 });
             }
 
@@ -149,7 +151,7 @@ namespace GymMangamentSystem.Apis.Controllers
 
             try
             {
-                _logger.LogInformation("Updating roles for user with ID: {UserId}", id);
+                _logger.LogInformation("Starting role update for user with ID: {UserId}", id);
 
                 var user = await _userManager.FindByIdAsync(model.UserId);
                 if (user == null)
@@ -159,12 +161,14 @@ namespace GymMangamentSystem.Apis.Controllers
                 }
 
                 var currentRoles = await _userManager.GetRolesAsync(user);
-                var updatedRoles = model.Roles
+                var requestedRoles = model.Roles
                     .Where(r => r.IsSelected)
                     .Select(r => r.Name)
                     .ToList();
 
-                var rolesToAdd = updatedRoles.Except(currentRoles).ToList();
+                var rolesToAdd = requestedRoles.Except(currentRoles).ToList();
+                var rolesToRemove = currentRoles.Except(requestedRoles).ToList();
+
                 if (rolesToAdd.Any())
                 {
                     var addResult = await _userManager.AddToRolesAsync(user, rolesToAdd);
@@ -174,9 +178,9 @@ namespace GymMangamentSystem.Apis.Controllers
                         _logger.LogError("Failed to add roles to user ID {UserId}: {Errors}", id, errors);
                         return BadRequest(new ApiResponse(400, $"Failed to add roles: {errors}"));
                     }
+                    _logger.LogInformation("Added roles {Roles} to user ID: {UserId}", string.Join(", ", rolesToAdd), id);
                 }
 
-                var rolesToRemove = currentRoles.Except(updatedRoles).ToList();
                 if (rolesToRemove.Any())
                 {
                     var removeResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
@@ -186,6 +190,12 @@ namespace GymMangamentSystem.Apis.Controllers
                         _logger.LogError("Failed to remove roles from user ID {UserId}: {Errors}", id, errors);
                         return BadRequest(new ApiResponse(400, $"Failed to remove roles: {errors}"));
                     }
+                    _logger.LogInformation("Removed roles {Roles} from user ID: {UserId}", string.Join(", ", rolesToRemove), id);
+                }
+
+                if (!rolesToAdd.Any() && !rolesToRemove.Any())
+                {
+                    _logger.LogInformation("No role changes detected for user ID: {UserId}", id);
                 }
 
                 _logger.LogInformation("User roles updated successfully for ID: {UserId}", id);
@@ -194,9 +204,11 @@ namespace GymMangamentSystem.Apis.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating roles for user with ID: {UserId}", id);
-                return HandleException(ex);
+                return StatusCode(500, new ApiExceptionResponse(500, "An unexpected error occurred", ex.Message));
             }
         }
+
+
         [HttpPost("users")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
