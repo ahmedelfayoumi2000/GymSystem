@@ -98,9 +98,11 @@ try
 
     var identityContext = services.GetRequiredService<AppIdentityDbContext>();
     await identityContext.Database.MigrateAsync();
+	await AppIdentityDbContextSeed2.SeedAsync(identityContext);
 
 
-    var userManager = services.GetRequiredService<UserManager<AppUser>>();
+
+	var userManager = services.GetRequiredService<UserManager<AppUser>>();
     await AppIdentityDbContextSeed.SeedAsync(userManager);
 }
 catch (Exception ex)

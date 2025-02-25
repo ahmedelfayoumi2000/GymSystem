@@ -40,8 +40,8 @@ namespace GymSystem.BLL.Repositories.Business
                     _logger.LogWarning("User with UserCode {UserCode} not found.", attendanceDto.UserCode);
                     return new ApiResponse(404, "User not found");
                 }
-
-                attendanceDto.IsAttended = true;
+				attendanceDto.UserId = user.Id;
+				attendanceDto.IsAttended = true;
                 var attendance = _mapper.Map<Attendance>(attendanceDto);
 
                 var attendanceRepo = _unitOfWork.Repository<Attendance>();

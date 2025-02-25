@@ -12,7 +12,11 @@ namespace GymSystem.DAL.Entities.Identity
         [EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "Password is required")]
+		[Phone]
+		[RegularExpression(@"^(\+20|0)?1[0125][0-9]{8}$", ErrorMessage = "يجب أن يكون الرقم تابعًا لشبكة مصرية.")]
+		public string? PhoneNumber { get; set; }
+
+		[Required(ErrorMessage = "Password is required")]
         [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
         public string Password { get; set; }
 

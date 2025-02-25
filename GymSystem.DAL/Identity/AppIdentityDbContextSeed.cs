@@ -1,4 +1,5 @@
-﻿using GymSystem.DAL.Entities.Identity;
+﻿using GymSystem.DAL.Entities;
+using GymSystem.DAL.Entities.Identity;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ namespace GymSystem.DAL.Identity
         public static async Task SeedAsync(UserManager<AppUser> userManager)
         {
             await SeedAdminUserAsync(userManager);
+
         }
 
         private static async Task SeedAdminUserAsync(UserManager<AppUser> userManager)
@@ -53,5 +55,10 @@ namespace GymSystem.DAL.Identity
         {
             return $"{role.Substring(0, 2).ToUpper()}-{DateTime.UtcNow.ToString("yyMMdd")}-{userCount}";
         }
-    }
+
+
+		
+
+
+	}
 }
