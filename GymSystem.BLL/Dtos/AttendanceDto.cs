@@ -8,9 +8,10 @@ namespace GymSystem.BLL.Dtos
 {
     public class AttendanceDto
     {
-        public int? AttendanceId { get; set; }
+        public int AttendanceId { get; set; }
         public bool IsAttended { get; set; }
-        public string? UserCode { get; set; }
+        public string UserCode { get; set; }
         public int ClassId { get; set; }
-    }
+		public string UserId { get; set; } // إضافة UserId
+	}
 }
