@@ -13,7 +13,6 @@ namespace GymSystem.DAL.Entities.Identity
         public string Email { get; set; }
 
 		[Phone]
-		[RegularExpression(@"^(\+20|0)?1[0125][0-9]{8}$", ErrorMessage = "يجب أن يكون الرقم تابعًا لشبكة مصرية.")]
 		public string? PhoneNumber { get; set; }
 
 		[Required(ErrorMessage = "Password is required")]

@@ -2,9 +2,14 @@
 using GymSystem.BLL.Errors;
 using GymSystem.BLL.Interfaces.Business;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System.Security.Claims;
+
 namespace GymSystem.API.Controllers
 {
+   
     public class FeedbackController : BaseApiController
     {
         private readonly IFeedbackRepo _feedbackRepo;
@@ -18,30 +23,34 @@ namespace GymSystem.API.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        [Authorize(Roles = "Admin,Trainer")]
         [HttpGet("getFeedback")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetFeedback([FromQuery] int id)
         {
-            if (!ModelState.IsValid)
+            if (id <= 0)
             {
-                _logger.LogWarning("Invalid model state for GetFeedback with ID: {FeedbackId}", id);
+                _logger.LogWarning("Invalid feedback ID provided for GetFeedback: {FeedbackId}", id);
                 return BadRequest(new ApiValidationErrorResponse
                 {
-                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
+                    Errors = new List<string> { "Feedback ID must be a positive integer." },
+                    StatusCode = 400,
+                    Message = "Invalid request data"
                 });
             }
 
             try
             {
-                _logger.LogInformation("Fetching feedback with ID: {FeedbackId}", id);
+                _logger.LogInformation("Fetching feedback with ID: {FeedbackId} by user with role: {Roles}", id, User.FindFirst(ClaimTypes.Role)?.Value);
                 var feedback = await _feedbackRepo.GetFeedbackByIdAsync(id);
 
                 if (feedback == null)
                 {
                     _logger.LogWarning("Feedback with ID {FeedbackId} not found.", id);
-                    return NotFound(new ApiResponse(404, $"Feedback with ID {id} not found."));
+                    return NotFound(new ApiResponse(404, $"Feedback with ID {id} not found"));
                 }
 
                 _logger.LogInformation("Feedback retrieved successfully with ID: {FeedbackId}", id);
@@ -54,14 +63,16 @@ namespace GymSystem.API.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin,Trainer")]
         [HttpGet("getAllFeedbacks")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAllFeedbacks()
         {
             try
             {
-                _logger.LogInformation("Fetching all feedbacks");
+                _logger.LogInformation("Fetching all feedbacks by user with role: {Roles}", User.FindFirst(ClaimTypes.Role)?.Value);
                 var feedbacks = await _feedbackRepo.GetAllFeedbacksAsync();
 
                 _logger.LogInformation("Retrieved {Count} feedbacks successfully", feedbacks.Count);
@@ -69,38 +80,35 @@ namespace GymSystem.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving all feedbacks");
+                _logger.LogError(ex, "Error retrieving all feedbacks.");
                 return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while retrieving feedbacks", ex.Message));
             }
         }
 
-        [Authorize]
+        [Authorize(Roles = "Member")]
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> CreateFeedback([FromBody] FeedbackDto feedbackDto)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || feedbackDto == null)
             {
-                _logger.LogWarning("Invalid model state for CreateFeedback with data: {@FeedbackDto}", feedbackDto);
-                return BadRequest(new ApiValidationErrorResponse
-                {
-                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
-                });
+                _logger.LogWarning("Invalid model state or null data for CreateFeedback.");
+                return BadRequest(CreateValidationErrorResponse("Invalid feedback data"));
             }
 
             try
             {
-                _logger.LogInformation("Creating feedback with data: {@FeedbackDto}", feedbackDto);
-
                 var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
                 if (userIdClaim == null)
                 {
-                    _logger.LogWarning("UserId claim not found in the token for CreateFeedback request.");
+                    _logger.LogWarning("UserId claim not found in token for CreateFeedback request.");
                     return BadRequest(new ApiResponse(400, "UserId claim not found in the token"));
                 }
 
                 feedbackDto.UserId = userIdClaim.Value;
+                _logger.LogInformation("Creating feedback by UserId: {UserId}", feedbackDto.UserId);
                 var response = await _feedbackRepo.CreateFeedbackAsync(feedbackDto);
 
                 if (response.StatusCode == 200)
@@ -109,7 +117,7 @@ namespace GymSystem.API.Controllers
                     return Ok(response);
                 }
 
-                _logger.LogWarning("Failed to create feedback for UserId: {UserId}. Response: {Message}", feedbackDto.UserId, response.Message);
+                _logger.LogWarning("Failed to create feedback for UserId: {UserId}: {Message}", feedbackDto.UserId, response.Message);
                 return BadRequest(response);
             }
             catch (Exception ex)
@@ -119,25 +127,28 @@ namespace GymSystem.API.Controllers
             }
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteFeedback(int id)
         {
-            if (!ModelState.IsValid)
+            if (id <= 0)
             {
-                _logger.LogWarning("Invalid model state for DeleteFeedback with ID: {FeedbackId}", id);
+                _logger.LogWarning("Invalid feedback ID provided for DeleteFeedback: {FeedbackId}", id);
                 return BadRequest(new ApiValidationErrorResponse
                 {
-                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
+                    Errors = new List<string> { "Feedback ID must be a positive integer." },
+                    StatusCode = 400,
+                    Message = "Invalid request data"
                 });
             }
 
             try
             {
-                _logger.LogInformation("Deleting feedback with ID: {FeedbackId}", id);
+                _logger.LogInformation("Deleting feedback with ID: {FeedbackId} by Admin.", id);
                 var response = await _feedbackRepo.DeleteFeedbackAsync(id);
 
                 if (response.StatusCode == 200)
@@ -152,7 +163,7 @@ namespace GymSystem.API.Controllers
                     return NotFound(response);
                 }
 
-                _logger.LogWarning("Failed to delete feedback with ID: {FeedbackId}. Response: {Message}", id, response.Message);
+                _logger.LogWarning("Failed to delete feedback with ID: {FeedbackId}: {Message}", id, response.Message);
                 return BadRequest(response);
             }
             catch (Exception ex)
@@ -162,33 +173,55 @@ namespace GymSystem.API.Controllers
             }
         }
 
-        [Authorize]
+        [Authorize(Roles = "Member")]
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdateFeedback(int id, [FromBody] FeedbackDto feedbackDto)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || feedbackDto == null)
             {
-                _logger.LogWarning("Invalid model state for UpdateFeedback with ID: {FeedbackId}", id);
+                _logger.LogWarning("Invalid model state or null data for UpdateFeedback with ID: {FeedbackId}", id);
+                return BadRequest(CreateValidationErrorResponse("Invalid feedback data"));
+            }
+
+            if (id <= 0)
+            {
+                _logger.LogWarning("Invalid feedback ID provided for UpdateFeedback: {FeedbackId}", id);
                 return BadRequest(new ApiValidationErrorResponse
                 {
-                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage))
+                    Errors = new List<string> { "Feedback ID must be a positive integer." },
+                    StatusCode = 400,
+                    Message = "Invalid request data"
                 });
             }
 
             try
             {
-                _logger.LogInformation("Updating feedback with ID: {FeedbackId}", id);
-
                 var userIdClaim = User.Claims.FirstOrDefault(c => c.Type == "UserId");
                 if (userIdClaim == null)
                 {
-                    _logger.LogWarning("UserId claim not found in the token for UpdateFeedback request with ID: {FeedbackId}", id);
+                    _logger.LogWarning("UserId claim not found in token for UpdateFeedback request with ID: {FeedbackId}", id);
                     return BadRequest(new ApiResponse(400, "UserId claim not found in the token"));
                 }
 
+                var existingFeedback = await _feedbackRepo.GetFeedbackByIdAsync(id);
+                if (existingFeedback == null)
+                {
+                    _logger.LogWarning("Feedback with ID {FeedbackId} not found.", id);
+                    return NotFound(new ApiResponse(404, $"Feedback with ID {id} not found"));
+                }
+
+                if (existingFeedback.UserId != userIdClaim.Value)
+                {
+                    _logger.LogWarning("Member attempted to update unauthorized feedback with ID: {FeedbackId}", id);
+                    return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse(403, "You can only update your own feedback."));
+                }
+
+                _logger.LogInformation("Updating feedback with ID: {FeedbackId} by UserId: {UserId}", id, userIdClaim.Value);
                 var response = await _feedbackRepo.UpdateFeedbackAsync(id, feedbackDto);
 
                 if (response.StatusCode == 200)
@@ -203,7 +236,7 @@ namespace GymSystem.API.Controllers
                     return NotFound(response);
                 }
 
-                _logger.LogWarning("Failed to update feedback with ID: {FeedbackId}. Response: {Message}", id, response.Message);
+                _logger.LogWarning("Failed to update feedback with ID: {FeedbackId}: {Message}", id, response.Message);
                 return BadRequest(response);
             }
             catch (Exception ex)
@@ -213,5 +246,19 @@ namespace GymSystem.API.Controllers
             }
         }
 
+        private ApiValidationErrorResponse CreateValidationErrorResponse(string message)
+        {
+            return new ApiValidationErrorResponse
+            {
+                Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList(),
+                StatusCode = 400,
+                Message = message
+            };
+        }
+
+        private ActionResult<ApiResponse> HandleException(Exception ex)
+        {
+            return StatusCode(500, new ApiExceptionResponse(500, "An unexpected error occurred", ex.Message));
+        }
     }
 }

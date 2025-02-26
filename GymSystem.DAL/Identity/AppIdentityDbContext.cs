@@ -13,7 +13,13 @@ namespace GymSystem.DAL.Identity
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
+			modelBuilder.Entity<ActiveUser>(entity =>
+			{
+				entity.HasKey(a => a.UserId); // تعيين UserId كمفتاح أساسي
+				entity.Property(a => a.LoginTime).IsRequired(); // LoginTime مطلوب
+			});
+
+			base.OnModelCreating(modelBuilder);
             SeedRoles(modelBuilder);
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         }
@@ -43,5 +49,6 @@ namespace GymSystem.DAL.Identity
         public DbSet<DailyPlan> DailyPlans { get; set; }
         public DbSet<MonthlyPlan> MonthlyPlans { get; set; }
         public DbSet<SubscriptionPlan> SubscriptionPlan { get; set; }
-    }
+		public DbSet<ActiveUser> ActiveUsers { get; set; } // إضافة DbSet لـ ActiveUser
+	}
 }
