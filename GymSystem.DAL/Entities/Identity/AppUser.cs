@@ -7,23 +7,37 @@ namespace GymSystem.DAL.Entities.Identity
     {
         public string DisplayName { get; set; } 
         public Address? Address { get; set; }
-        public int UserRole { get; set; } 
-        public bool IsDeleted { get; set; } 
+        public int UserRole { get; set; }
+        public bool IsDeleted { get; set; } = false;
         public DateTime? DeletedAt { get; set; }
         public string? ProfileImageName { get; set; } 
         public string? UserCode { get; set; }
-        public string? Gender { get; set; }
-        public DateTime? StartDate { get; set; }
-        public DateTime? EndDate { get; set; } 
-        public string? City { get; set; } 
-        public bool IsStopped { get; set; } = false; 
+        public string Gender { get; set; }
+        public uint? Age { get; set; }
+        public DateTime StartDate { get; set; }= DateTime.Now;
+
+		private DateTime _endDate;
+		public DateTime EndDate
+		{
+			get => _endDate;
+			set => _endDate = value == default ? DateTime.Now : value;
+		}
+
+		public bool IsStopped { get; set; } = false; 
         public DateTime? StopDate { get; set; }
         public int? HaveDays { get; set; }
         public string? AddBy { get; set; } 
-        public int? RemainingDays { get; set; }
+        public int? RemainingDays
+		{
+			get
+			{
+				TimeSpan remainingTime = EndDate - DateTime.Now;
+				return remainingTime.Days;
+			}
+		}
 
-        // العلاقات مع الخطط
-        public int? DailyPlanId { get; set; } 
+		// العلاقات مع الخطط
+		public int? DailyPlanId { get; set; } 
         public DailyPlan DailyPlan { get; set; } 
 
         public int? MonthlyPlanId { get; set; } 

@@ -20,7 +20,7 @@ namespace GymMangamentSystem.Apis.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class UserController : ControllerBase
     {
         private readonly RoleManager<IdentityRole> _roleManager;
@@ -110,6 +110,8 @@ namespace GymMangamentSystem.Apis.Controllers
                     UserName = user.UserName,
                     Email = user.Email,
                     PhoneNumber = user.PhoneNumber,
+                    Gender=user.Gender,
+                    Age=user.Age,
                     Roles = roles.ToList(),
                     UserCode = user.UserCode
                 };
@@ -240,6 +242,7 @@ namespace GymMangamentSystem.Apis.Controllers
                 {
                     DisplayName = model.DisplayName,
                     Email = model.Email,
+                    Gender=model.Gender,
                     UserName = model.Email.Split('@')[0],
                     UserRole = (int)model.UserRole,
                     EmailConfirmed = true // Admin عندو صلاحية إنشاء مستخدمين مؤكدين مباشرة
@@ -269,6 +272,7 @@ namespace GymMangamentSystem.Apis.Controllers
                     DisplayName = user.DisplayName,
                     UserName = user.UserName,
                     Email = user.Email,
+                    Gender=user.Gender,
                     Roles = new List<string> { roleName }
                 };
 
@@ -319,6 +323,8 @@ namespace GymMangamentSystem.Apis.Controllers
                 user.Email = userDto.Email;
                 user.UserName = userDto.UserName;
                 user.PhoneNumber = userDto.PhoneNumber;
+                user.Gender = userDto.Gender;
+
 
                 var updateResult = await _userManager.UpdateAsync(user);
                 if (!updateResult.Succeeded)
@@ -386,8 +392,8 @@ namespace GymMangamentSystem.Apis.Controllers
             return role switch
             {
                 UserRoleEnum.Admin => "Admin",
-                UserRoleEnum.Trainer => "Trainer",
-                UserRoleEnum.Member => "Member",
+				UserRoleEnum.Member => "Member",
+				UserRoleEnum.Trainer => "Trainer",
                 UserRoleEnum.Receptionist => "Receptionist",
                 _ => throw new ArgumentException("Invalid user role", nameof(role))
             };

@@ -17,8 +17,9 @@ namespace GymSystem.DAL.Entities.Identity
         public string Country { get; set; }
         public string City { get; set; }
         public string Street { get; set; }
-        public string AppUserId { get; set; }
-        public AppUser User { get; set; }
+
+        //public string AppUserId { get; set; }
+        //public AppUser User { get; set; }
 
     }
 }

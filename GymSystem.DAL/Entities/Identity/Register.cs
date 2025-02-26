@@ -22,8 +22,10 @@ namespace GymSystem.DAL.Entities.Identity
 
         [Compare("Password", ErrorMessage = "Passwords do not match")]
         public string ConfirmPassword { get; set; }
+		public string Gender { get; set; }
 
-        public UserRoleEnum UserRole { get; set; }
+
+		public UserRoleEnum UserRole { get; set; }
         public MembershipType MembershipType { get; set; }
 
         //// Plan Selection

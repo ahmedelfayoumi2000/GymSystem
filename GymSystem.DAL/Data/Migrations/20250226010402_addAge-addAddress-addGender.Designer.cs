@@ -4,6 +4,7 @@ using GymSystem.DAL.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GymSystem.DAL.Data.Migrations
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    partial class AppIdentityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250226010402_addAge-addAddress-addGender")]
+    partial class addAgeaddAddressaddGender
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -237,7 +240,7 @@ namespace GymSystem.DAL.Data.Migrations
                     b.Property<string>("AddBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<long?>("Age")
+                    b.Property<long>("Age")
                         .HasColumnType("bigint");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -877,8 +880,10 @@ namespace GymSystem.DAL.Data.Migrations
 
                             b1.ToTable("AspNetUsers");
 
-                            b1.WithOwner()
+                            b1.WithOwner("User")
                                 .HasForeignKey("AppUserId");
+
+                            b1.Navigation("User");
                         });
 
                     b.OwnsMany("GymSystem.DAL.Entities.Identity.RefreshToken", "RefreshTokens", b1 =>

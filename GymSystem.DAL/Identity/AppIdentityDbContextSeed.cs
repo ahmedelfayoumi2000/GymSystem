@@ -23,8 +23,17 @@ namespace GymSystem.DAL.Identity
                 UserName = "MohamedSalahadmin",
                 Email = "mohamedbedosalah2003@gmail.com",
                 PhoneNumber = "01093422099",
-                EmailConfirmed = true, 
-                UserCode = GenerateUserCode("Admin", 1)
+                EmailConfirmed = true,
+				Address = new Address
+				{
+					FristName = "Mohamed",
+					LastName = "salah",
+					Country = "Egypt",
+					City = "Menouf",
+					Street = "Tarek Barhim"
+				},
+
+				UserCode = GenerateUserCode("Admin", 1)
             };
 
             const string adminPassword = "Pa$$w0rd123!";
