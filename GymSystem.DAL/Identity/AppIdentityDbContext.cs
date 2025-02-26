@@ -42,5 +42,6 @@ namespace GymSystem.DAL.Identity
         public DbSet<WorkoutPlan> WorkoutPlans { get; set; }
         public DbSet<DailyPlan> DailyPlans { get; set; }
         public DbSet<MonthlyPlan> MonthlyPlans { get; set; }
+        public DbSet<SubscriptionPlan> SubscriptionPlan { get; set; }
     }
 }

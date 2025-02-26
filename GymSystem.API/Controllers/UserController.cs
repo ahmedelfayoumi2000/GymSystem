@@ -14,8 +14,15 @@ using Microsoft.Extensions.Logging;
 
 namespace GymMangamentSystem.Apis.Controllers
 {
+<<<<<<< HEAD
 
     public class UserController : BaseApiController
+=======
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize(Roles = "Admin")]
+    public class UserController : ControllerBase
+>>>>>>> cf53edc30b4172c2dfabeb1b477bd496029ea7f5
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly ILogger<UserController> _logger;
@@ -127,7 +134,24 @@ namespace GymMangamentSystem.Apis.Controllers
                     return NotFound(new ApiResponse(404, $"User with ID {id} not found"));
                 }
 
+<<<<<<< HEAD
                 var userDto = await MapUserToDto(user);
+=======
+                var roles = await _userManager.GetRolesAsync(user);
+                var userDto = new UserDto
+                {
+                    Id = user.Id,
+                    DisplayName = user.DisplayName,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Gender=user.Gender,
+                    Age=user.Age,
+                    Roles = roles.ToList(),
+                    UserCode = user.UserCode
+                };
+
+>>>>>>> cf53edc30b4172c2dfabeb1b477bd496029ea7f5
                 _logger.LogInformation("User retrieved successfully with ID: {UserId}", id);
                 return Ok(new ApiResponse(200, "User retrieved successfully", userDto));
             }
@@ -244,6 +268,7 @@ namespace GymMangamentSystem.Apis.Controllers
                 {
                     DisplayName = model.DisplayName,
                     Email = model.Email,
+                    Gender=model.Gender,
                     UserName = model.Email.Split('@')[0],
                     UserRole = (int)model.UserRole,
                     EmailConfirmed = true // Admin-confirmed user creation
@@ -267,7 +292,20 @@ namespace GymMangamentSystem.Apis.Controllers
                     return BadRequest(new ApiResponse(400, $"Failed to assign role: {errors}"));
                 }
 
+<<<<<<< HEAD
                 var userDto = await MapUserToDto(user);
+=======
+                var userDto = new UserDto
+                {
+                    Id = user.Id,
+                    DisplayName = user.DisplayName,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    Gender=user.Gender,
+                    Roles = new List<string> { roleName }
+                };
+
+>>>>>>> cf53edc30b4172c2dfabeb1b477bd496029ea7f5
                 _logger.LogInformation("User added successfully with ID: {UserId}", user.Id);
                 return StatusCode(StatusCodes.Status201Created, new ApiResponse(201, "User created successfully", userDto));
             }
@@ -313,6 +351,8 @@ namespace GymMangamentSystem.Apis.Controllers
                 user.Email = userDto.Email;
                 user.UserName = userDto.UserName;
                 user.PhoneNumber = userDto.PhoneNumber;
+                user.Gender = userDto.Gender;
+
 
                 var updateResult = await _userManager.UpdateAsync(user);
                 if (!updateResult.Succeeded)
@@ -423,8 +463,8 @@ namespace GymMangamentSystem.Apis.Controllers
             return role switch
             {
                 UserRoleEnum.Admin => "Admin",
-                UserRoleEnum.Trainer => "Trainer",
-                UserRoleEnum.Member => "Member",
+				UserRoleEnum.Member => "Member",
+				UserRoleEnum.Trainer => "Trainer",
                 UserRoleEnum.Receptionist => "Receptionist",
                 _ => throw new ArgumentException("Invalid user role", nameof(role))
             };

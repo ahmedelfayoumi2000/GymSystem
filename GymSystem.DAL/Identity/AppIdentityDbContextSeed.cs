@@ -1,4 +1,5 @@
-﻿using GymSystem.DAL.Entities.Identity;
+﻿using GymSystem.DAL.Entities;
+using GymSystem.DAL.Entities.Identity;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,7 @@ namespace GymSystem.DAL.Identity
         public static async Task SeedAsync(UserManager<AppUser> userManager)
         {
             await SeedAdminUserAsync(userManager);
+
         }
 
         private static async Task SeedAdminUserAsync(UserManager<AppUser> userManager)
@@ -21,8 +23,17 @@ namespace GymSystem.DAL.Identity
                 UserName = "MohamedSalahadmin",
                 Email = "mohamedbedosalah2003@gmail.com",
                 PhoneNumber = "01093422099",
-                EmailConfirmed = true, 
-                UserCode = GenerateUserCode("Admin", 1)
+                EmailConfirmed = true,
+				Address = new Address
+				{
+					FristName = "Mohamed",
+					LastName = "salah",
+					Country = "Egypt",
+					City = "Menouf",
+					Street = "Tarek Barhim"
+				},
+
+				UserCode = GenerateUserCode("Admin", 1)
             };
 
             const string adminPassword = "Pa$$w0rd123!";
@@ -53,5 +64,10 @@ namespace GymSystem.DAL.Identity
         {
             return $"{role.Substring(0, 2).ToUpper()}-{DateTime.UtcNow.ToString("yyMMdd")}-{userCount}";
         }
-    }
+
+
+		
+
+
+	}
 }

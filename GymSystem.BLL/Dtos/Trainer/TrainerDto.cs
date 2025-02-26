@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GymSystem.DAL.Entities.Identity;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,12 +14,13 @@ namespace GymSystem.BLL.Dtos.Trainer
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
         public string Gender { get; set; }
-        public DateTime StartDate { get; set; }
+		public uint Age { get; set; }
+		public Address? Address { get; set; }
+		public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public string City { get; set; }
         public bool IsStopped { get; set; }
         public int HaveDays { get; set; }
-        public string AddBy { get; set; }
+        public string? AddBy { get; set; }
         public int RemainingDays { get; set; }
     }
 }

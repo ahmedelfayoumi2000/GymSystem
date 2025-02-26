@@ -1,5 +1,7 @@
-﻿using System;
+﻿using GymSystem.DAL.Entities.Identity;
+using System;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace GymSystem.API.DTOs.Trainer
 {
@@ -29,8 +31,11 @@ namespace GymSystem.API.DTOs.Trainer
         [Required(ErrorMessage = "End date is required")]
         public DateTime EndDate { get; set; }
 
-        [Required(ErrorMessage = "City is required")]
-        public string City { get; set; }
+        
+        public Address? Address { get; set; }
+        
+        [Required(ErrorMessage = "Age is required")]
+        public uint Age { get; set; }
     }
 
     public enum Gender

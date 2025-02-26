@@ -13,14 +13,20 @@ namespace GymSystem.DAL.Entities.Identity
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
 
-        [Required(ErrorMessage = "Password is required")]
+		[Phone]
+		[RegularExpression(@"^(\+20|0)?1[0125][0-9]{8}$", ErrorMessage = "يجب أن يكون الرقم تابعًا لشبكة مصرية.")]
+		public string? PhoneNumber { get; set; }
+
+		[Required(ErrorMessage = "Password is required")]
         [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
         public string Password { get; set; }
 
         [Compare("Password", ErrorMessage = "Passwords do not match")]
         public string ConfirmPassword { get; set; }
+		public string Gender { get; set; }
 
-        public UserRoleEnum UserRole { get; set; }
+
+		public UserRoleEnum UserRole { get; set; }
         public MembershipType MembershipType { get; set; }
 
         //// Plan Selection

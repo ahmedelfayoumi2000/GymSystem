@@ -129,7 +129,7 @@ namespace GymSystem.API.Controllers
             return result.StatusCode == 400 ? BadRequest(result) : Ok(result);
         }
 
-        //[Authorize]
+        [Authorize]
         [HttpPost("verify-otp")]
         public IActionResult VerifyOtp(VerifyOtp dto)
         {
@@ -145,7 +145,7 @@ namespace GymSystem.API.Controllers
             return Ok(result);
         }
 
-        //[Authorize]
+        [Authorize]
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(ResetPassword dto)
         {

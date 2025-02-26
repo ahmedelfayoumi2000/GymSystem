@@ -4,16 +4,19 @@ using GymSystem.DAL.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace GymSystem.DAL.Data.Migrations
+namespace GymSystem.DAL.data.Migrations
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    partial class AppIdentityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250225120925_SubscriptionTable")]
+    partial class SubscriptionTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -237,8 +240,8 @@ namespace GymSystem.DAL.Data.Migrations
                     b.Property<string>("AddBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<long?>("Age")
-                        .HasColumnType("bigint");
+                    b.Property<string>("City")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -261,11 +264,10 @@ namespace GymSystem.DAL.Data.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<DateTime>("EndDate")
+                    b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Gender")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("HaveDays")
@@ -309,10 +311,13 @@ namespace GymSystem.DAL.Data.Migrations
                     b.Property<string>("ProfileImageName")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("RemainingDays")
+                        .HasColumnType("int");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("StartDate")
+                    b.Property<DateTime?>("StartDate")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("StopDate")
@@ -877,8 +882,10 @@ namespace GymSystem.DAL.Data.Migrations
 
                             b1.ToTable("AspNetUsers");
 
-                            b1.WithOwner()
+                            b1.WithOwner("User")
                                 .HasForeignKey("AppUserId");
+
+                            b1.Navigation("User");
                         });
 
                     b.OwnsMany("GymSystem.DAL.Entities.Identity.RefreshToken", "RefreshTokens", b1 =>
