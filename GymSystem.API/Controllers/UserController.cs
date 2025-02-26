@@ -1,7 +1,9 @@
-﻿
-using GymSystem.BLL.Dtos.Role;
+﻿using AutoMapper;
+using GymSystem.API.Controllers;
 using GymSystem.BLL.Dtos;
+using GymSystem.BLL.Dtos.Role;
 using GymSystem.BLL.Errors;
+using GymSystem.DAL.Entities.Enums.Auth;
 using GymSystem.DAL.Entities.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -9,75 +11,93 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using AutoMapper;
-using GymSystem.DAL.Entities.Enums.Auth;
 
 namespace GymMangamentSystem.Apis.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    //[Authorize(Roles = "Admin")]
-    public class UserController : ControllerBase
+
+    public class UserController : BaseApiController
     {
-        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly UserManager<AppUser> _userManager;
         private readonly ILogger<UserController> _logger;
-        private readonly IMapper _mapper;
+
 
         public UserController(
-            RoleManager<IdentityRole> roleManager,
             UserManager<AppUser> userManager,
-            ILogger<UserController> logger,
-            IMapper mapper)
+            ILogger<UserController> logger
+           )
         {
-            _roleManager = roleManager ?? throw new ArgumentNullException(nameof(roleManager));
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _mapper = mapper;
         }
 
-     
-        [HttpGet("users")]
+
+        [Authorize(Roles = "Admin,Receptionist")]
+        [HttpGet("trainers")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<ActionResult<ApiResponse>> GetUsers()
+        public async Task<ActionResult<ApiResponse>> GetTrainers()
         {
             try
             {
-                _logger.LogInformation("Fetching all users");
+                _logger.LogInformation("Fetching all trainers.");
+                var trainers = await _userManager.GetUsersInRoleAsync("Trainer");
+                var trainerDtos = await MapUsersToDtos(trainers);
 
-                var users = await _userManager.Users.ToListAsync();
-                var userDtos = new List<UserDto>();
-
-                foreach (var user in users)
-                {
-                    var roles = await _userManager.GetRolesAsync(user);
-                    userDtos.Add(new UserDto
-                    {
-                        Id = user.Id,
-                        DisplayName = user.DisplayName,
-                        UserName = user.UserName,
-                        Email = user.Email,
-                        PhoneNumber = user.PhoneNumber,
-                        Roles = roles.ToList(),
-                        UserCode = user.UserCode
-                    });
-                }
-
-                _logger.LogInformation("Successfully retrieved {UserCount} users", userDtos.Count);
-                return Ok(new ApiResponse(200, "Users retrieved successfully", userDtos));
+                _logger.LogInformation("Successfully retrieved {TrainerCount} trainers.", trainerDtos.Count);
+                return Ok(new ApiResponse(200, "Trainers retrieved successfully", trainerDtos));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving all users");
+                _logger.LogError(ex, "Error retrieving trainers.");
                 return HandleException(ex);
             }
         }
 
+      
+        [HttpGet("members")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<ApiResponse>> GetMembers()
+        {
+            try
+            {
+                _logger.LogInformation("Fetching all members.");
+                var members = await _userManager.GetUsersInRoleAsync("Member");
+                var memberDtos = await MapUsersToDtos(members);
+
+                _logger.LogInformation("Successfully retrieved {MemberCount} members.", memberDtos.Count);
+                return Ok(new ApiResponse(200, "Members retrieved successfully", memberDtos));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving members.");
+                return HandleException(ex);
+            }
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("receptionists")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<ApiResponse>> GetReceptionists()
+        {
+            try
+            {
+                _logger.LogInformation("Fetching all receptionists.");
+                var receptionists = await _userManager.GetUsersInRoleAsync("Receptionist");
+                var receptionistDtos = await MapUsersToDtos(receptionists);
+
+                _logger.LogInformation("Successfully retrieved {ReceptionistCount} receptionists.", receptionistDtos.Count);
+                return Ok(new ApiResponse(200, "Receptionists retrieved successfully", receptionistDtos));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving receptionists.");
+                return HandleException(ex);
+            }
+        }
+
+        [Authorize(Roles = "Admin,Receptionist")]
         [HttpGet("users/{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -85,10 +105,15 @@ namespace GymMangamentSystem.Apis.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ApiResponse>> GetUser(string id)
         {
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrWhiteSpace(id))
             {
-                _logger.LogWarning("GetUser called with null or empty ID");
-                return BadRequest(new ApiResponse(400, "User ID is required"));
+                _logger.LogWarning("GetUser called with null or empty ID.");
+                return BadRequest(new ApiValidationErrorResponse
+                {
+                    Errors = new List<string> { "User ID is required and must not be empty." },
+                    StatusCode = 400,
+                    Message = "Invalid request data"
+                });
             }
 
             try
@@ -98,22 +123,11 @@ namespace GymMangamentSystem.Apis.Controllers
                 var user = await _userManager.FindByIdAsync(id);
                 if (user == null)
                 {
-                    _logger.LogWarning("User with ID {UserId} not found", id);
+                    _logger.LogWarning("User with ID {UserId} not found.", id);
                     return NotFound(new ApiResponse(404, $"User with ID {id} not found"));
                 }
 
-                var roles = await _userManager.GetRolesAsync(user);
-                var userDto = new UserDto
-                {
-                    Id = user.Id,
-                    DisplayName = user.DisplayName,
-                    UserName = user.UserName,
-                    Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    Roles = roles.ToList(),
-                    UserCode = user.UserCode
-                };
-
+                var userDto = await MapUserToDto(user);
                 _logger.LogInformation("User retrieved successfully with ID: {UserId}", id);
                 return Ok(new ApiResponse(200, "User retrieved successfully", userDto));
             }
@@ -124,7 +138,7 @@ namespace GymMangamentSystem.Apis.Controllers
             }
         }
 
-
+        [Authorize(Roles = "Admin")]
         [HttpPut("users/roles/{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -132,15 +146,10 @@ namespace GymMangamentSystem.Apis.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ApiResponse>> UpdateUserRoles(string id, [FromBody] UserRoleDTO model)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || model == null)
             {
                 _logger.LogWarning("Invalid model state for UpdateUserRoles with UserId: {UserId}", id);
-                return BadRequest(new ApiValidationErrorResponse
-                {
-                    Errors = ModelState.Values.SelectMany(x => x.Errors.Select(e => e.ErrorMessage)).ToList(),
-                    StatusCode = 400,
-                    Message = "Bad Request, Invalid Data Provided"
-                });
+                return BadRequest(CreateValidationErrorResponse("Invalid user role data"));
             }
 
             if (id != model.UserId)
@@ -156,15 +165,12 @@ namespace GymMangamentSystem.Apis.Controllers
                 var user = await _userManager.FindByIdAsync(model.UserId);
                 if (user == null)
                 {
-                    _logger.LogWarning("User with ID {UserId} not found", id);
+                    _logger.LogWarning("User with ID {UserId} not found.", id);
                     return NotFound(new ApiResponse(404, $"User with ID {id} not found"));
                 }
 
                 var currentRoles = await _userManager.GetRolesAsync(user);
-                var requestedRoles = model.Roles
-                    .Where(r => r.IsSelected)
-                    .Select(r => r.Name)
-                    .ToList();
+                var requestedRoles = model.Roles?.Where(r => r.IsSelected).Select(r => r.Name).ToList() ?? new List<string>();
 
                 var rolesToAdd = requestedRoles.Except(currentRoles).ToList();
                 var rolesToRemove = currentRoles.Except(requestedRoles).ToList();
@@ -204,11 +210,12 @@ namespace GymMangamentSystem.Apis.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error updating roles for user with ID: {UserId}", id);
-                return StatusCode(500, new ApiExceptionResponse(500, "An unexpected error occurred", ex.Message));
+                return HandleException(ex);
             }
         }
 
 
+        [Authorize(Roles = "Admin,Receptionist")]
         [HttpPost("users")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -216,23 +223,20 @@ namespace GymMangamentSystem.Apis.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ApiResponse>> AddUser([FromBody] Register model)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || model == null)
             {
                 _logger.LogWarning("Invalid model state for AddUser with Email: {Email}", model?.Email);
-                return BadRequest(new ApiValidationErrorResponse
-                {
-                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList()
-                });
+                return BadRequest(CreateValidationErrorResponse("Invalid user registration data"));
             }
 
             try
             {
-                _logger.LogInformation("Adding new user with Email: {Email}", model.Email);
+                _logger.LogInformation("Attempting to add new user with Email: {Email}", model.Email);
 
                 var existingUser = await _userManager.FindByEmailAsync(model.Email);
                 if (existingUser != null)
                 {
-                    _logger.LogWarning("User with Email {Email} already exists", model.Email);
+                    _logger.LogWarning("User with Email {Email} already exists.", model.Email);
                     return Conflict(new ApiResponse(409, $"User with email '{model.Email}' already exists"));
                 }
 
@@ -242,7 +246,7 @@ namespace GymMangamentSystem.Apis.Controllers
                     Email = model.Email,
                     UserName = model.Email.Split('@')[0],
                     UserRole = (int)model.UserRole,
-                    EmailConfirmed = true // Admin عندو صلاحية إنشاء مستخدمين مؤكدين مباشرة
+                    EmailConfirmed = true // Admin-confirmed user creation
                 };
 
                 var createResult = await _userManager.CreateAsync(user, model.Password);
@@ -257,21 +261,13 @@ namespace GymMangamentSystem.Apis.Controllers
                 var roleResult = await _userManager.AddToRoleAsync(user, roleName);
                 if (!roleResult.Succeeded)
                 {
-                    await _userManager.DeleteAsync(user); // Rollback
+                    await _userManager.DeleteAsync(user); // Rollback user creation
                     var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
                     _logger.LogError("Failed to assign role {RoleName} to user {Email}: {Errors}", roleName, model.Email, errors);
                     return BadRequest(new ApiResponse(400, $"Failed to assign role: {errors}"));
                 }
 
-                var userDto = new UserDto
-                {
-                    Id = user.Id,
-                    DisplayName = user.DisplayName,
-                    UserName = user.UserName,
-                    Email = user.Email,
-                    Roles = new List<string> { roleName }
-                };
-
+                var userDto = await MapUserToDto(user);
                 _logger.LogInformation("User added successfully with ID: {UserId}", user.Id);
                 return StatusCode(StatusCodes.Status201Created, new ApiResponse(201, "User created successfully", userDto));
             }
@@ -282,6 +278,7 @@ namespace GymMangamentSystem.Apis.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("users/{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -289,13 +286,10 @@ namespace GymMangamentSystem.Apis.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ApiResponse>> UpdateUser(string id, [FromBody] UserDto userDto)
         {
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid || userDto == null)
             {
                 _logger.LogWarning("Invalid model state for UpdateUser with ID: {UserId}", id);
-                return BadRequest(new ApiValidationErrorResponse
-                {
-                    Errors = ModelState.Values.SelectMany(x => x.Errors.Select(e => e.ErrorMessage))
-                });
+                return BadRequest(CreateValidationErrorResponse("Invalid user update data"));
             }
 
             if (id != userDto.Id)
@@ -306,12 +300,12 @@ namespace GymMangamentSystem.Apis.Controllers
 
             try
             {
-                _logger.LogInformation("Updating user details for ID: {UserId}", id);
+                _logger.LogInformation("Attempting to update user details for ID: {UserId}", id);
 
                 var user = await _userManager.FindByIdAsync(id);
                 if (user == null)
                 {
-                    _logger.LogWarning("User with ID {UserId} not found", id);
+                    _logger.LogWarning("User with ID {UserId} not found.", id);
                     return NotFound(new ApiResponse(404, $"User with ID {id} not found"));
                 }
 
@@ -328,8 +322,9 @@ namespace GymMangamentSystem.Apis.Controllers
                     return BadRequest(new ApiResponse(400, $"Failed to update user: {errors}"));
                 }
 
+                var updatedUserDto = await MapUserToDto(user);
                 _logger.LogInformation("User details updated successfully for ID: {UserId}", id);
-                return Ok(new ApiResponse(200, "User updated successfully", _mapper.Map<UserDto>(user)));
+                return Ok(new ApiResponse(200, "User updated successfully", updatedUserDto));
             }
             catch (Exception ex)
             {
@@ -338,6 +333,7 @@ namespace GymMangamentSystem.Apis.Controllers
             }
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("users/{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -345,20 +341,25 @@ namespace GymMangamentSystem.Apis.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<ActionResult<ApiResponse>> DeleteUser(string id)
         {
-            if (string.IsNullOrEmpty(id))
+            if (string.IsNullOrWhiteSpace(id))
             {
-                _logger.LogWarning("DeleteUser called with null or empty ID");
-                return BadRequest(new ApiResponse(400, "User ID is required"));
+                _logger.LogWarning("DeleteUser called with null or empty ID.");
+                return BadRequest(new ApiValidationErrorResponse
+                {
+                    Errors = new List<string> { "User ID is required and must not be empty." },
+                    StatusCode = 400,
+                    Message = "Invalid request data"
+                });
             }
 
             try
             {
-                _logger.LogInformation("Deleting user with ID: {UserId}", id);
+                _logger.LogInformation("Attempting to delete user with ID: {UserId}", id);
 
                 var user = await _userManager.FindByIdAsync(id);
                 if (user == null)
                 {
-                    _logger.LogWarning("User with ID {UserId} not found", id);
+                    _logger.LogWarning("User with ID {UserId} not found.", id);
                     return NotFound(new ApiResponse(404, $"User with ID {id} not found"));
                 }
 
@@ -380,6 +381,42 @@ namespace GymMangamentSystem.Apis.Controllers
             }
         }
 
+        // Helper Methods
+
+        private async Task<List<UserDto>> MapUsersToDtos(IList<AppUser> users)
+        {
+            var userDtos = new List<UserDto>();
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                userDtos.Add(new UserDto
+                {
+                    Id = user.Id,
+                    DisplayName = user.DisplayName,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Roles = roles.ToList(),
+                    UserCode = user.UserCode
+                });
+            }
+            return userDtos;
+        }
+
+        private async Task<UserDto> MapUserToDto(AppUser user)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            return new UserDto
+            {
+                Id = user.Id,
+                DisplayName = user.DisplayName,
+                UserName = user.UserName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                Roles = roles.ToList(),
+                UserCode = user.UserCode
+            };
+        }
 
         private string GetRoleNameFromEnum(UserRoleEnum role)
         {
@@ -392,6 +429,17 @@ namespace GymMangamentSystem.Apis.Controllers
                 _ => throw new ArgumentException("Invalid user role", nameof(role))
             };
         }
+
+        private ApiValidationErrorResponse CreateValidationErrorResponse(string message)
+        {
+            return new ApiValidationErrorResponse
+            {
+                Errors = ModelState.Values.SelectMany(x => x.Errors.Select(e => e.ErrorMessage)).ToList(),
+                StatusCode = 400,
+                Message = message
+            };
+        }
+
         private ActionResult<ApiResponse> HandleException(Exception ex)
         {
             return StatusCode(500, new ApiExceptionResponse(500, "An unexpected error occurred", ex.Message));

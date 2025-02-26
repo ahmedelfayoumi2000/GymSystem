@@ -7,8 +7,7 @@ using GymSystem.DAL.Data;
 using GymSystem.DAL.Entities.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using GymSystem.BLL.Interfaces.Auth;
-using GymSystem.BLL.Services.Auth;
+
 using GymSystem.BLL.Repositories.Business;
 using GymSystem.BLL.Repositories;
 using MailKit;
@@ -52,14 +51,15 @@ namespace GymSystem.API.Extentions
             services.AddScoped<IBMIRecordRepo, BMIRecordRepo>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<INutritionPlanRepo, NutritionPlanRepo>();
-            //services.AddScoped<IExerciseCategoryRepo, ExerciseCategoryRepo>();
             services.AddScoped<IClassRepo, ClassRepository>();
+            services.AddScoped<IMealsCategoryRepo, MealsCategoryRepository>();
+            services.AddScoped<IMealRepo, MealRepository>();
+            services.AddScoped<IMembershipRepo, MembershipRepository>();
+            //services.AddScoped<IExerciseCategoryRepo, ExerciseCategoryRepo>();
             //services.AddScoped<IWorkoutPlanRepo, WorkoutPlanRepo>();
             //services.AddScoped<IExerciseRepo, ExerciseRepo>();
-            //services.AddScoped<IMealsCategoryRepo, MealsCategoryRepo>();
-            //services.AddScoped<IMealRepo, MealRepo>();
-            //services.AddScoped<IMembershipRepo, MembershipRepo>();
             //services.AddScoped<INotificationRepo, NotificationRepo>();
+
 
 
 

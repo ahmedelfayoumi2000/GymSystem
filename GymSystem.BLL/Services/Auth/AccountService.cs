@@ -29,6 +29,7 @@ namespace GymSystem.BLL.Services.Auth
         private readonly IMemoryCache _memoryCache;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly ILogger<AccountService> _logger;
+        private readonly ActiveUserManager _activeUserManager;
         #endregion
 
         #region Constructor
@@ -39,7 +40,8 @@ namespace GymSystem.BLL.Services.Auth
             IOtpService otpService,
             IMemoryCache memoryCache,
             SignInManager<AppUser> signInManager,
-            ILogger<AccountService> logger)
+            ILogger<AccountService> logger,
+            ActiveUserManager activeUserManager)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _mailSettings = options?.CurrentValue ?? throw new ArgumentNullException(nameof(options));
@@ -48,6 +50,7 @@ namespace GymSystem.BLL.Services.Auth
             _memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
             _signInManager = signInManager ?? throw new ArgumentNullException(nameof(signInManager));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _activeUserManager = activeUserManager;
         }
         #endregion
 
@@ -104,6 +107,7 @@ namespace GymSystem.BLL.Services.Auth
                         Token = jwtToken,
                         RefreshToken = refreshToken.Token,
                         UserCode = user.UserCode,
+                        PhoneNumber = user.PhoneNumber
                         //Role = (UserRoleEnum)user.UserRole
                     });
             }
@@ -115,10 +119,66 @@ namespace GymSystem.BLL.Services.Auth
             }
         }
 
+        //public async Task<ApiResponse> LoginAsync(Login dto)
+        //{
+        //    try
+        //    {
+        //        var user = await _userManager.FindByEmailAsync(dto.Email);
+        //        if (user == null)
+        //        {
+        //            _logger.LogWarning("Login attempt for non-existent email: {Email}", dto.Email);
+        //            return new ApiResponse(400, "User not found.");
+        //        }
+
+        //        if (!await _userManager.CheckPasswordAsync(user, dto.Password))
+        //        {
+        //            _logger.LogWarning("Incorrect password for email: {Email}", dto.Email);
+        //            return new ApiResponse(400, "Incorrect email or password.");
+        //        }
+
+        //        if (!user.EmailConfirmed)
+        //        {
+        //            _logger.LogWarning("Login attempt with unconfirmed email: {Email}", dto.Email);
+        //            return new ApiResponse(400, "Email not confirmed. Please verify your email address.");
+        //        }
+
+        //        var (jwtToken, refreshToken) = await _tokenService.CreateTokenAsync(user);
+        //        var roles = await _userManager.GetRolesAsync(user);
+
+        //        return new ApiResponse(200, "Login successful",
+        //            new UserDto
+        //            {
+        //                Id = user.Id,
+        //                DisplayName = user.DisplayName,
+        //                UserName = user.UserName,
+        //                Email = user.Email,
+        //                PhoneNumber = user.PhoneNumber,
+        //                Roles = roles.ToList(),
+        //                Token = jwtToken,
+        //                RefreshToken = refreshToken.Token,
+        //                UserCode = user.UserCode,
+        //                //Role = (UserRoleEnum)user.UserRole
+        //            });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Error during login for email: {Email}", dto.Email);
+        //        return new ApiResponse(500, $"An error occurred: {ex.Message}");
+        //    }
+        //}
+
         public async Task<ApiResponse> LoginAsync(Login dto)
         {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
+            {
+                _logger.LogWarning("Invalid login attempt with null or empty data.");
+                return new ApiResponse(400, "Email and password are required.");
+            }
+
             try
             {
+                _logger.LogInformation("Login attempt for email: {Email}", dto.Email);
+
                 var user = await _userManager.FindByEmailAsync(dto.Email);
                 if (user == null)
                 {
@@ -138,9 +198,19 @@ namespace GymSystem.BLL.Services.Auth
                     return new ApiResponse(400, "Email not confirmed. Please verify your email address.");
                 }
 
+                if (_activeUserManager.IsUserLoggedIn(user.Id))
+                {
+                    _logger.LogWarning("User with ID {UserId} is already logged in.", user.Id);
+                    return new ApiResponse(403, "User is already logged in. Please log out first.");
+                }
+
                 var (jwtToken, refreshToken) = await _tokenService.CreateTokenAsync(user);
                 var roles = await _userManager.GetRolesAsync(user);
 
+                // إضافة المستخدم إلى قائمة المستخدمين النشطين
+                _activeUserManager.AddUser(user.Id);
+
+                _logger.LogInformation("User {Email} logged in successfully with ID: {UserId}", dto.Email, user.Id);
                 return new ApiResponse(200, "Login successful",
                     new UserDto
                     {
@@ -152,14 +222,51 @@ namespace GymSystem.BLL.Services.Auth
                         Roles = roles.ToList(),
                         Token = jwtToken,
                         RefreshToken = refreshToken.Token,
-                        UserCode = user.UserCode,
-                        //Role = (UserRoleEnum)user.UserRole
+                        UserCode = user.UserCode
                     });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login for email: {Email}", dto.Email);
                 return new ApiResponse(500, $"An error occurred: {ex.Message}");
+            }
+        }
+
+        // دالة تسجيل الخروج
+        public async Task<ApiResponse> LogoutAsync(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                _logger.LogWarning("Logout attempt with null or empty UserId.");
+                return new ApiResponse(400, "User ID is required.");
+            }
+
+            try
+            {
+                _logger.LogInformation("Logout attempt for UserId: {UserId}", userId);
+
+                if (!_activeUserManager.IsUserLoggedIn(userId))
+                {
+                    _logger.LogWarning("Logout attempt for UserId {UserId} who is not logged in.", userId);
+                    return new ApiResponse(400, "User is not currently logged in.");
+                }
+
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("Logout attempt for non-existent UserId: {UserId}", userId);
+                    return new ApiResponse(404, "User not found.");
+                }
+
+                _activeUserManager.RemoveUser(userId);
+
+                _logger.LogInformation("User with ID {UserId} logged out successfully.", userId);
+                return new ApiResponse(200, "Logout successful");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during logout for UserId: {UserId}", userId);
+                return new ApiResponse(500, $"An error occurred while logging out: {ex.Message}");
             }
         }
 
@@ -346,7 +453,8 @@ namespace GymSystem.BLL.Services.Auth
                 if (token.StartsWith("eyJ"))
                 {
                     _logger.LogWarning("Invalid token format for user ID {UserId}. JWT token provided instead of email confirmation token.", userId);
-                    return (false, "Invalid token: A JWT token was provided instead of an email confirmation token. Please use the token from the confirmation email sent during registration or resend it using 'Resend Confirmation Email'.");
+                    return (false, "Invalid token: A JWT token was provided instead of an email confirmation token. Please use the token from the confirmation email " +
+                        "sent during registration or resend it using 'Resend Confirmation Email'.");
                 }
 
                 var confirmed = await _userManager.ConfirmEmailAsync(user, token);
@@ -421,6 +529,7 @@ namespace GymSystem.BLL.Services.Auth
             {
                 DisplayName = dto.DisplayName,
                 Email = dto.Email,
+                PhoneNumber = dto.PhoneNumber,
                 UserName = dto.Email.Split('@')[0],
                 UserRole = (int)dto.UserRole,
                 EmailConfirmed = false,

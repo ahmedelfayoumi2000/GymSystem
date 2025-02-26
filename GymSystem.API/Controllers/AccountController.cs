@@ -41,6 +41,61 @@ namespace GymSystem.API.Controllers
             return Ok(result);
         }
 
+
+        [Authorize]
+        [HttpPost("logout")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                _logger.LogInformation("Processing logout request.");
+
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    _logger.LogWarning("Logout attempt with no UserId claim in token. Claims available: {Claims}",
+                        string.Join(", ", User.Claims.Select(c => $"{c.Type}: {c.Value}")));
+                    return BadRequest(new ApiValidationErrorResponse
+                    {
+                        Errors = new List<string> { "UserId claim not found in the token." },
+                        StatusCode = 400,
+                        Message = "Invalid request data"
+                    });
+                }
+
+                _logger.LogInformation("Initiating logout for UserId: {UserId}", userId);
+
+                var response = await _accountService.LogoutAsync(userId);
+
+                if (response.StatusCode == 200)
+                {
+                    _logger.LogInformation("User with ID {UserId} logged out successfully.", userId);
+                    return Ok(response);
+                }
+
+                _logger.LogWarning("Logout failed for UserId: {UserId}. Reason: {Message}", userId, response.Message);
+                return response.StatusCode switch
+                {
+                    400 => BadRequest(response),
+                    404 => NotFound(response),
+                    _ => StatusCode(500, new ApiExceptionResponse(500, "Unexpected logout failure", response.Message))
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error during logout attempt for UserId: {UserId}",
+                    User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while logging out", ex.Message));
+            }
+        }
+
+
+
         [HttpPost("register")]
         public async Task<IActionResult> Register(Register model)
         {

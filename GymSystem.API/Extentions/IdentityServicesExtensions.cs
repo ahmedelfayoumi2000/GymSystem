@@ -67,6 +67,10 @@ namespace GymSystem.API.Extentions
             services.AddScoped<IAccountService, AccountService>();
             services.AddScoped<IOtpService, OtpService>();
             services.AddScoped<ITokenService, TokenService>();
+            services.AddSingleton<ActiveUserManager>();
+            services.AddScoped<UserManager<AppUser>>();
+            services.AddMemoryCache();
+            services.AddLogging(); 
             return services;
         }
     }

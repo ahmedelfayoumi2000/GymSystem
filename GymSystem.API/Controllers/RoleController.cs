@@ -8,13 +8,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using GymSystem.API.Controllers;
 
 namespace GymMangamentSystem.Apis.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
+   
     [Authorize(Roles = "Admin")]
-    public class RoleController : ControllerBase
+    public class RoleController : BaseApiController
     {
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly UserManager<AppUser> _userManager;

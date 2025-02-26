@@ -64,7 +64,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-
+builder.Services.AddLogging();
 var app = builder.Build();
 
 app.UseStatusCodePagesWithReExecute("/errors/{0}");
