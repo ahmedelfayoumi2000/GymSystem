@@ -20,7 +20,7 @@ public class DateComparisonAttribute : ValidationAttribute
 
         var endDate = (DateTime)endDateProperty.GetValue(validationContext.ObjectInstance);
 
-        if (startDate >= endDate)
+        if (startDate > endDate)
             return new ValidationResult($"Start date must be before end date");
 
         return ValidationResult.Success;

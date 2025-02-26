@@ -101,6 +101,8 @@ namespace GymSystem.BLL.Services.Auth
                         UserName = user.UserName,
                         Email = user.Email,
                         PhoneNumber=user.PhoneNumber,
+                        Gender=user.Gender,
+                        Age=user.Age,
                         Roles = roles.ToList(),
                         Token = jwtToken,
                         RefreshToken = refreshToken.Token,
@@ -426,6 +428,7 @@ namespace GymSystem.BLL.Services.Auth
                 UserName = dto.Email.Split('@')[0],
                 UserRole = (int)dto.UserRole,
                 EmailConfirmed = false,
+                Gender= dto.Gender,
                 UserCode = userCode
             };
         }
