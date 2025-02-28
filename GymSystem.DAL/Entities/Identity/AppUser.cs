@@ -54,5 +54,8 @@ namespace GymSystem.DAL.Entities.Identity
         public ICollection<Feedback> Feedbacks { get; set; }
         public ICollection<Notification> Notifications { get; set; }
         public ICollection<RefreshToken> RefreshTokens { get; set; }
+
+        public ICollection<Class> Classes { get; set; } = new List<Class>(); 
+        public ICollection<EquipmentMaintenance> MaintainedEquipments { get; set; } = new List<EquipmentMaintenance>(); 
     }
 }

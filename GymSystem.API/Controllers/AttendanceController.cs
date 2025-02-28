@@ -4,38 +4,39 @@ using GymSystem.BLL.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System.Security.Claims;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace GymSystem.API.Controllers
 {
+    [Route("api/[controller]")]
+    [ApiController]
     public class AttendanceController : BaseApiController
     {
         private readonly IAttendaceRepo _attendaceRepo;
-        private readonly ILogger<AttendanceController> _logger;
 
-        public AttendanceController(
-            IAttendaceRepo attendaceRepo,
-            ILogger<AttendanceController> logger)
+        public AttendanceController(IAttendaceRepo attendaceRepo)
         {
             _attendaceRepo = attendaceRepo ?? throw new ArgumentNullException(nameof(attendaceRepo));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        [Authorize(Roles = "Admin,Receptionist,Trainer")]
+        /// <summary>
+        /// Retrieves all attendance records for a specific user by UserCode.
+        /// </summary>
+        [Authorize(Roles = "Admin, Receptionist")]
         [HttpGet("getattendances")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetAttendances([FromQuery] string userCode)
         {
-            if (string.IsNullOrWhiteSpace(userCode))
+            if (string.IsNullOrWhiteSpace(userCode) || !ModelState.IsValid)
             {
-                _logger.LogWarning("Invalid UserCode provided for GetAttendances.");
                 return BadRequest(new ApiValidationErrorResponse
                 {
-                    Errors = new List<string> { "UserCode is required and must not be empty." },
+                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList(),
                     StatusCode = 400,
                     Message = "Invalid request data"
                 });
@@ -43,73 +44,69 @@ namespace GymSystem.API.Controllers
 
             try
             {
-                _logger.LogInformation("Fetching attendances for UserCode: {UserCode} by user with role: {Roles}", userCode, User.FindFirst(ClaimTypes.Role)?.Value);
                 var attendances = await _attendaceRepo.GetAttendancesForUserAsync(userCode);
-
                 if (attendances == null || !attendances.Any())
                 {
-                    _logger.LogWarning("No attendances found for UserCode: {UserCode}", userCode);
-                    return NotFound(new ApiResponse(404, $"No attendances found for UserCode {userCode}"));
+                    return NotFound(new ApiResponse(404, "No attendances found for the specified user."));
                 }
 
-                _logger.LogInformation("Successfully retrieved {Count} attendances for UserCode: {UserCode}", attendances.Count, userCode);
                 return Ok(new ApiResponse(200, "Attendances retrieved successfully", attendances));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving attendances for UserCode: {UserCode}", userCode);
                 return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while retrieving attendances", ex.Message));
             }
         }
 
-        [Authorize(Roles = "Admin,Receptionist")]
+        /// <summary>
+        /// Adds a new attendance record for a user.
+        /// </summary>
+        [Authorize(Roles = "Admin, Receptionist")]
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddAttendance([FromBody] AttendanceDto attendance)
         {
             if (!ModelState.IsValid || attendance == null)
             {
-                _logger.LogWarning("Invalid model state or null data for AddAttendance with UserCode: {UserCode}", attendance?.UserCode);
-                return BadRequest(CreateValidationErrorResponse("Invalid attendance data"));
+                return BadRequest(new ApiValidationErrorResponse
+                {
+                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList(),
+                    StatusCode = 400,
+                    Message = "Invalid attendance data"
+                });
             }
 
             try
             {
-                _logger.LogInformation("Adding attendance for UserCode: {UserCode} by user with role: {Roles}", attendance.UserCode, User.FindFirst(ClaimTypes.Role)?.Value);
                 var response = await _attendaceRepo.AddAttendanceAsync(attendance);
-
-                if (response.StatusCode == 200)
-                {
-                    _logger.LogInformation("Attendance added successfully for UserCode: {UserCode}", attendance.UserCode);
-                    return Ok(response);
-                }
-
-                _logger.LogWarning("Failed to add attendance for UserCode: {UserCode}. Response: {Message}", attendance.UserCode, response.Message);
-                return BadRequest(response);
+                return response.StatusCode == 200
+                    ? Ok(response)
+                    : BadRequest(response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding attendance for UserCode: {UserCode}", attendance?.UserCode);
                 return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while adding attendance", ex.Message));
             }
         }
 
-        [Authorize(Roles = "Admin,Receptionist")]
+        /// <summary>
+        /// Deletes an attendance record by its ID.
+        /// </summary>
+        [Authorize(Roles = "Admin, Receptionist")]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteAttendance(int id)
         {
-            if (id <= 0)
+            if (id <= 0 || !ModelState.IsValid)
             {
-                _logger.LogWarning("Invalid attendance ID provided for DeleteAttendance: {AttendanceId}", id);
                 return BadRequest(new ApiValidationErrorResponse
                 {
-                    Errors = new List<string> { "Attendance ID must be a positive integer." },
+                    Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).Concat(new[] { "Attendance ID must be a positive integer." }).ToList(),
                     StatusCode = 400,
                     Message = "Invalid request data"
                 });
@@ -117,44 +114,18 @@ namespace GymSystem.API.Controllers
 
             try
             {
-                _logger.LogInformation("Deleting attendance with ID: {AttendanceId} by user with role: {Roles}", id, User.FindFirst(ClaimTypes.Role)?.Value);
                 var response = await _attendaceRepo.DeleteAttendanceAsync(id);
-
-                if (response.StatusCode == 200)
+                return response.StatusCode switch
                 {
-                    _logger.LogInformation("Attendance deleted successfully with ID: {AttendanceId}", id);
-                    return Ok(response);
-                }
-
-                if (response.StatusCode == 404)
-                {
-                    _logger.LogWarning("Attendance with ID {AttendanceId} not found.", id);
-                    return NotFound(response);
-                }
-
-                _logger.LogWarning("Failed to delete attendance with ID: {AttendanceId}. Response: {Message}", id, response.Message);
-                return BadRequest(response);
+                    200 => Ok(response),
+                    404 => NotFound(response),
+                    _ => BadRequest(response)
+                };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting attendance with ID: {AttendanceId}", id);
                 return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while deleting attendance", ex.Message));
             }
-        }
-
-        private ApiValidationErrorResponse CreateValidationErrorResponse(string message)
-        {
-            return new ApiValidationErrorResponse
-            {
-                Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList(),
-                StatusCode = 400,
-                Message = message
-            };
-        }
-
-        private ActionResult<ApiResponse> HandleException(Exception ex)
-        {
-            return StatusCode(500, new ApiExceptionResponse(500, "An unexpected error occurred", ex.Message));
         }
     }
 }

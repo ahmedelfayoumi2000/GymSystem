@@ -8,7 +8,7 @@ namespace GymSystem.BLL.Dtos
 {
     public class ExerciseCategoryDto
     {
-        public int? ExerciseCategoryId { get; set; }
+        public int? ID { get; set; }
         //public string? ImageUrl { get; set; }
         //[NotMapped]
         //public IFormFile Image { get; set; }

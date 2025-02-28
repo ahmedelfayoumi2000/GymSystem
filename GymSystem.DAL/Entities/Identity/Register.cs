@@ -11,10 +11,8 @@ namespace GymSystem.DAL.Entities.Identity
 
         [EmailAddress(ErrorMessage = "Invalid email address")]
         public string Email { get; set; }
-        public string PhoneNumber { get; set; }
 
 		[Phone]
-		[RegularExpression(@"^(\+20|0)?1[0125][0-9]{8}$", ErrorMessage = "يجب أن يكون الرقم تابعًا لشبكة مصرية.")]
 		public string? PhoneNumber { get; set; }
 
 		[Required(ErrorMessage = "Password is required")]

@@ -42,6 +42,7 @@ namespace GymSystem.API.Controllers
         }
 
 
+
         [Authorize]
         [HttpPost("logout")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -94,8 +95,6 @@ namespace GymSystem.API.Controllers
             }
         }
 
-
-
         [HttpPost("register")]
         public async Task<IActionResult> Register(Register model)
         {
@@ -145,6 +144,7 @@ namespace GymSystem.API.Controllers
             return Ok(result);
         }
 
+
         [Authorize]
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(ResetPassword dto)
@@ -189,6 +189,8 @@ namespace GymSystem.API.Controllers
             }
             return Ok(result);
         }
+
+
 
         [HttpPost("resend-confirmation-email")]
         public async Task<IActionResult> ResendConfirmationEmail([FromBody] ResendConfirmationEmailRequest request)

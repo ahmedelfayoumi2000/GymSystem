@@ -103,14 +103,13 @@ namespace GymSystem.BLL.Services.Auth
                         DisplayName = user.DisplayName,
                         UserName = user.UserName,
                         Email = user.Email,
-                        PhoneNumber=user.PhoneNumber,
-                        Gender=user.Gender,
-                        Age=user.Age,
+                        PhoneNumber = user.PhoneNumber,
+                        Gender = user.Gender,
+                        Age = user.Age,
                         Roles = roles.ToList(),
                         Token = jwtToken,
                         RefreshToken = refreshToken.Token,
                         UserCode = user.UserCode,
-                        PhoneNumber = user.PhoneNumber
                         //Role = (UserRoleEnum)user.UserRole
                     });
             }
@@ -527,19 +526,19 @@ namespace GymSystem.BLL.Services.Auth
         }
 
         private AppUser CreateUserFromDto(Register dto, string userCode)
-         {
-               return new AppUser
-               {
-        DisplayName = dto.DisplayName,
-        Email = dto.Email,
-        PhoneNumber=dto.PhoneNumber,
-        UserName = dto.Email.Split('@')[0],
-        UserRole = (int)dto.UserRole,
-        EmailConfirmed = false,
-        Gender= dto.Gender,
-        UserCode = userCode
-                  };
-            }
+        {
+            return new AppUser
+            {
+                DisplayName = dto.DisplayName,
+                Email = dto.Email,
+                PhoneNumber = dto.PhoneNumber,
+                UserName = dto.Email.Split('@')[0],
+                UserRole = (int)dto.UserRole,
+                EmailConfirmed = false,
+                Gender = dto.Gender,
+                UserCode = userCode
+            };
+        }
 
         private async Task<IdentityResult> AssignRoleToUserAsync(AppUser user, UserRoleEnum role)
         {

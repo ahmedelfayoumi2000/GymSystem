@@ -67,6 +67,9 @@ namespace GymSystem.API.Helpers
             CreateMap<Membership, MembershipDto>().ReverseMap();
             CreateMap<Notification, NotificationDto>().ReverseMap();
             CreateMap<AppUser, UserDto>().ReverseMap();
+            //CreateMap<EquipmentDto, Equipment>().ReverseMap();
+            CreateMap<EquipmentCreateDto, Equipment>();
+            CreateMap<Equipment, EquipmentViewDto>();
         }
     }
 }

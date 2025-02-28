@@ -10,7 +10,7 @@ namespace GymSystem.BLL.Specifications
     public interface ISpecification<T>
     {
         //Criteria == Where
-        public Expression<Func<T, bool>> Criteria { get; set; }
+        Expression<Func<T, bool>> Criteria { get; }
 
         public List<Expression<Func<T, object>>> Includes { get; set; }
 

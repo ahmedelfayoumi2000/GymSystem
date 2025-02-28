@@ -16,14 +16,15 @@ namespace GymSystem.DAL.Entities
         public DateTime EndTime { get; set; }
         public bool IsDeleted { get; set; }
 
-        // العلاقة مع Trainer (AppUser)
-        public string? TrainerId { get; set; } // مفتاح أجنبي
+
+
+        public string? TrainerId { get; set; }
         public AppUser Trainer { get; set; }
 
-        // العلاقة مع Memberships
         public ICollection<Membership> Memberships { get; set; } = new List<Membership>();
 
-        // العلاقة مع Attendances
         public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
+
+        public ICollection<ClassEquipment> ClassEquipments { get; set; } = new List<ClassEquipment>();
     }
 }

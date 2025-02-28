@@ -5,36 +5,40 @@ using GymSystem.BLL.Interfaces.Business;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using System;
+using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace GymSystem.API.Controllers
 {
-  
+    [Route("api/[controller]")]
+    [ApiController]
     public class ClassController : BaseApiController
     {
         private readonly IClassRepo _classRepo;
-        private readonly ILogger<ClassController> _logger;
 
-        public ClassController(
-            IClassRepo classRepo,
-            ILogger<ClassController> logger)
+        public ClassController(IClassRepo classRepo)
         {
             _classRepo = classRepo ?? throw new ArgumentNullException(nameof(classRepo));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        /// <summary>
+        /// Retrieves a specific class by its ID.
+        /// </summary>
+        /// <param name="id">The ID of the class to retrieve.</param>
+        /// <returns>The class details if found, or an error response.</returns>
         [Authorize(Roles = "Admin,Receptionist,Trainer,Member")]
         [HttpGet("getClass")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetClass(int id)
         {
             if (id <= 0)
             {
-                _logger.LogWarning("Invalid class ID provided for GetClass: {Id}", id);
                 return BadRequest(new ApiValidationErrorResponse
                 {
                     Errors = new List<string> { "Class ID must be a positive integer." },
@@ -45,25 +49,24 @@ namespace GymSystem.API.Controllers
 
             try
             {
-                _logger.LogInformation("Fetching class with ID: {Id} by user with role: {Roles}", id, User.FindFirst(ClaimTypes.Role)?.Value);
                 var classDto = await _classRepo.GetClass(id);
-
                 if (classDto == null)
                 {
-                    _logger.LogWarning("Class with ID {Id} not found.", id);
                     return NotFound(new ApiResponse(404, $"Class with ID {id} not found"));
                 }
 
-                _logger.LogInformation("Class with ID {Id} retrieved successfully.", id);
                 return Ok(new ApiResponse(200, "Class retrieved successfully", classDto));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving class with ID: {Id}", id);
                 return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while retrieving the class", ex.Message));
             }
         }
 
+        /// <summary>
+        /// Retrieves all active classes in the system.
+        /// </summary>
+        /// <returns>A list of all active classes if successful, or an error response.</returns>
         [Authorize(Roles = "Admin,Receptionist,Trainer,Member")]
         [HttpGet("getAllClasses")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -73,66 +76,65 @@ namespace GymSystem.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Fetching all active classes by user with role: {Roles}", User.FindFirst(ClaimTypes.Role)?.Value);
                 var classes = await _classRepo.GetClasses();
-
-                _logger.LogInformation("Retrieved {Count} active classes.", classes.Count());
                 return Ok(new ApiResponse(200, "Classes retrieved successfully", classes));
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving all classes.");
                 return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while retrieving classes", ex.Message));
             }
         }
 
+        /// <summary>
+        /// Adds a new class to the system.
+        /// </summary>
+        /// <param name="classDto">The class data to add.</param>
+        /// <returns>The result of the operation, including the added class if successful.</returns>
         [Authorize(Roles = "Admin,Trainer")]
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> AddClass([FromBody] ClassDto classDto)
         {
             if (!ModelState.IsValid || classDto == null)
             {
-                _logger.LogWarning("Invalid model state or null data for AddClass with ClassName: {ClassName}", classDto?.ClassName);
                 return BadRequest(CreateValidationErrorResponse("Invalid class data"));
             }
 
             try
             {
-                var trainerIdClaim = User.Claims.FirstOrDefault(c => c.Type == "TrainerId");
-                if (trainerIdClaim == null && User.IsInRole("Trainer"))
+                if (User.IsInRole("Trainer"))
                 {
-                    _logger.LogWarning("TrainerId claim not found in token for AddClass request by Trainer.");
-                    return BadRequest(new ApiResponse(400, "TrainerId claim not found in the token"));
+                    var trainerIdClaim = User.Claims.FirstOrDefault(c => c.Type == "TrainerId");
+                    if (trainerIdClaim == null || string.IsNullOrWhiteSpace(trainerIdClaim.Value))
+                    {
+                        return BadRequest(new ApiResponse(400, "TrainerId claim is missing or invalid in the token."));
+                    }
+                    if (classDto.TrainerId != trainerIdClaim.Value)
+                    {
+                        return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse(403, "Trainers can only create classes for themselves."));
+                    }
                 }
 
-                if (User.IsInRole("Trainer") && classDto.TrainerId != trainerIdClaim?.Value)
-                {
-                    _logger.LogWarning("Trainer attempted to add class with unauthorized TrainerId: {TrainerId}", classDto.TrainerId);
-                    return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse(403, "Trainers can only create classes for themselves."));
-                }
-
-                _logger.LogInformation("Adding class with name: {ClassName} by user with role: {Roles}", classDto.ClassName, User.FindFirst(ClaimTypes.Role)?.Value);
                 var response = await _classRepo.AddClass(classDto);
-
-                if (response.StatusCode == 201)
-                {
-                    _logger.LogInformation("Class {ClassName} added successfully.", classDto.ClassName);
-                    return StatusCode(StatusCodes.Status201Created, response);
-                }
-
-                _logger.LogWarning("Failed to add class {ClassName}: {Message}", classDto.ClassName, response.Message);
-                return BadRequest(response);
+                return response.StatusCode == 201
+                    ? StatusCode(StatusCodes.Status201Created, response)
+                    : BadRequest(response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error adding class with name: {ClassName}", classDto?.ClassName);
                 return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while adding the class", ex.Message));
             }
         }
 
+        /// <summary>
+        /// Deletes a specific class by its ID.
+        /// </summary>
+        /// <param name="id">The ID of the class to delete.</param>
+        /// <returns>The result of the operation, including confirmation if successful.</returns>
         [Authorize(Roles = "Admin,Trainer")]
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -140,11 +142,11 @@ namespace GymSystem.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> DeleteClass(int id)
         {
             if (id <= 0)
             {
-                _logger.LogWarning("Invalid class ID provided for DeleteClass: {Id}", id);
                 return BadRequest(new ApiValidationErrorResponse
                 {
                     Errors = new List<string> { "Class ID must be a positive integer." },
@@ -155,42 +157,44 @@ namespace GymSystem.API.Controllers
 
             try
             {
-                _logger.LogInformation("Attempting to delete class with ID: {Id} by user with role: {Roles}", id, User.FindFirst(ClaimTypes.Role)?.Value);
                 var classDto = await _classRepo.GetClass(id);
-
                 if (classDto == null)
                 {
-                    _logger.LogWarning("Class with ID {Id} not found.", id);
                     return NotFound(new ApiResponse(404, $"Class with ID {id} not found"));
                 }
 
                 if (User.IsInRole("Trainer"))
                 {
                     var trainerIdClaim = User.Claims.FirstOrDefault(c => c.Type == "TrainerId");
-                    if (trainerIdClaim == null || classDto.TrainerId != trainerIdClaim.Value)
+                    if (trainerIdClaim == null || string.IsNullOrWhiteSpace(trainerIdClaim.Value))
                     {
-                        _logger.LogWarning("Trainer attempted to delete unauthorized class with ID: {Id}", id);
+                        return BadRequest(new ApiResponse(400, "TrainerId claim is missing or invalid in the token."));
+                    }
+                    if (classDto.TrainerId != trainerIdClaim.Value)
+                    {
                         return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse(403, "Trainers can only delete their own classes."));
                     }
                 }
 
                 var response = await _classRepo.DeleteClass(id);
-                if (response.StatusCode == 200)
-                {
-                    _logger.LogInformation("Class with ID {Id} deleted successfully.", id);
-                    return Ok(response);
-                }
-
-                _logger.LogWarning("Failed to delete class with ID {Id}: {Message}", id, response.Message);
-                return BadRequest(response);
+                return response.StatusCode == 200
+                    ? Ok(response)
+                    : response.StatusCode == 404
+                        ? NotFound(response)
+                        : BadRequest(response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting class with ID: {Id}", id);
                 return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while deleting the class", ex.Message));
             }
         }
 
+        /// <summary>
+        /// Updates an existing class by its ID.
+        /// </summary>
+        /// <param name="id">The ID of the class to update.</param>
+        /// <param name="classDto">The updated class data.</param>
+        /// <returns>The result of the operation, including the updated class if successful.</returns>
         [Authorize(Roles = "Admin,Trainer")]
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK)]
@@ -198,17 +202,11 @@ namespace GymSystem.API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> UpdateClass(int id, [FromBody] ClassDto classDto)
         {
-            if (!ModelState.IsValid || classDto == null)
-            {
-                _logger.LogWarning("Invalid model state or null data for UpdateClass with ID: {Id}", id);
-                return BadRequest(CreateValidationErrorResponse("Invalid class data"));
-            }
-
             if (id <= 0)
             {
-                _logger.LogWarning("Invalid class ID provided for UpdateClass: {Id}", id);
                 return BadRequest(new ApiValidationErrorResponse
                 {
                     Errors = new List<string> { "Class ID must be a positive integer." },
@@ -217,44 +215,46 @@ namespace GymSystem.API.Controllers
                 });
             }
 
+            if (!ModelState.IsValid || classDto == null)
+            {
+                return BadRequest(CreateValidationErrorResponse("Invalid class data"));
+            }
+
             try
             {
-                _logger.LogInformation("Attempting to update class with ID: {Id} by user with role: {Roles}", id, User.FindFirst(ClaimTypes.Role)?.Value);
                 var existingClass = await _classRepo.GetClass(id);
-
                 if (existingClass == null)
                 {
-                    _logger.LogWarning("Class with ID {Id} not found.", id);
                     return NotFound(new ApiResponse(404, $"Class with ID {id} not found"));
                 }
 
                 if (User.IsInRole("Trainer"))
                 {
                     var trainerIdClaim = User.Claims.FirstOrDefault(c => c.Type == "TrainerId");
-                    if (trainerIdClaim == null || (existingClass.TrainerId != trainerIdClaim.Value || classDto.TrainerId != trainerIdClaim.Value))
+                    if (trainerIdClaim == null || string.IsNullOrWhiteSpace(trainerIdClaim.Value))
                     {
-                        _logger.LogWarning("Trainer attempted to update unauthorized class with ID: {Id}", id);
+                        return BadRequest(new ApiResponse(400, "TrainerId claim is missing or invalid in the token."));
+                    }
+                    if (existingClass.TrainerId != trainerIdClaim.Value || classDto.TrainerId != trainerIdClaim.Value)
+                    {
                         return StatusCode(StatusCodes.Status403Forbidden, new ApiResponse(403, "Trainers can only update their own classes."));
                     }
                 }
 
                 var response = await _classRepo.UpdateClass(id, classDto);
-                if (response.StatusCode == 200)
-                {
-                    _logger.LogInformation("Class with ID {Id} updated successfully.", id);
-                    return Ok(response);
-                }
-
-                _logger.LogWarning("Failed to update class with ID {Id}: {Message}", id, response.Message);
-                return BadRequest(response);
+                return response.StatusCode == 200
+                    ? Ok(response)
+                    : response.StatusCode == 404
+                        ? NotFound(response)
+                        : BadRequest(response);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating class with ID: {Id}", id);
                 return StatusCode(500, new ApiExceptionResponse(500, "An error occurred while updating the class", ex.Message));
             }
         }
 
+        #region Helper Methods
         private ApiValidationErrorResponse CreateValidationErrorResponse(string message)
         {
             return new ApiValidationErrorResponse
@@ -264,10 +264,6 @@ namespace GymSystem.API.Controllers
                 Message = message
             };
         }
-
-        private ActionResult<ApiResponse> HandleException(Exception ex)
-        {
-            return StatusCode(500, new ApiExceptionResponse(500, "An unexpected error occurred", ex.Message));
-        }
+        #endregion
     }
 }
