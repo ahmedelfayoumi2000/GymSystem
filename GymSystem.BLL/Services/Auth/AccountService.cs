@@ -209,7 +209,7 @@ namespace GymSystem.BLL.Services.Auth
 				var (jwtToken, refreshToken) = await _tokenService.CreateTokenAsync(user);
 				var roles = await _userManager.GetRolesAsync(user);
 
-				// إضافة المستخدم إلى قائمة المستخدمين النشطين
+				// إضافة المستخدم إلى قائمة المستخدمين النشطين
 				_activeUserManager.AddUser(user.Id);
 
 				_logger.LogInformation("User {Email} logged in successfully with ID: {UserId}", dto.Email, user.Id);

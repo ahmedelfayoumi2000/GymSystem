@@ -1,51 +1,38 @@
-﻿using GymSystem.DAL.Entities.Identity;
-using GymSystem.DAL.Identity;
+﻿using System;
+using System.Collections.Concurrent;
 
-public class ActiveUserManager
+namespace GymSystem.BLL.Services.Auth
 {
-	private readonly AppIdentityDbContext _context;
-
-	public ActiveUserManager(AppIdentityDbContext context)
+	public class ActiveUserManager
 	{
-		_context = context;
-	}
+		private readonly ConcurrentDictionary<string, DateTime> _activeUsers;
 
-	public bool IsUserLoggedIn(string userId)
-	{
-		if (string.IsNullOrWhiteSpace(userId))
-			throw new ArgumentNullException(nameof(userId), "User ID cannot be null or empty.");
-
-		return _context.ActiveUsers.Any(a => a.UserId == userId);
-	}
-
-	public async Task AddUser(string userId)
-	{
-		if (string.IsNullOrWhiteSpace(userId))
-			throw new ArgumentNullException(nameof(userId), "User ID cannot be null or empty.");
-
-		if (IsUserLoggedIn(userId))
-			throw new InvalidOperationException($"User with ID {userId} is already active.");
-
-		var activeUser = new ActiveUser
+		public ActiveUserManager()
 		{
-			UserId = userId,
-			LoginTime = DateTime.UtcNow
-		};
+			_activeUsers = new ConcurrentDictionary<string, DateTime>();
+		}
 
-		_context.ActiveUsers.Add(activeUser);
-		await _context.SaveChangesAsync();
-	}
+		public bool IsUserLoggedIn(string userId)
+		{
+			if (string.IsNullOrWhiteSpace(userId))
+				throw new ArgumentNullException(nameof(userId), "User ID cannot be null or empty.");
+			return _activeUsers.ContainsKey(userId);
+		}
 
-	public async Task RemoveUser(string userId)
-	{
-		if (string.IsNullOrWhiteSpace(userId))
-			throw new ArgumentNullException(nameof(userId), "User ID cannot be null or empty.");
+		public void AddUser(string userId)
+		{
+			if (string.IsNullOrWhiteSpace(userId))
+				throw new ArgumentNullException(nameof(userId), "User ID cannot be null or empty.");
+			if (!_activeUsers.TryAdd(userId, DateTime.UtcNow))
+				throw new InvalidOperationException($"User with ID {userId} is already active.");
+		}
 
-		var activeUser = await _context.ActiveUsers.FindAsync(userId);
-		if (activeUser == null)
-			throw new InvalidOperationException($"User with ID {userId} is not active.");
-
-		_context.ActiveUsers.Remove(activeUser);
-		await _context.SaveChangesAsync();
+		public void RemoveUser(string userId)
+		{
+			if (string.IsNullOrWhiteSpace(userId))
+				throw new ArgumentNullException(nameof(userId), "User ID cannot be null or empty.");
+			if (!_activeUsers.TryRemove(userId, out _))
+				throw new InvalidOperationException($"Failed to remove user with ID {userId} from active users list.");
+		}
 	}
 }

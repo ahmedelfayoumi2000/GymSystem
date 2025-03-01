@@ -20,4 +20,8 @@
     <ProjectReference Include="..\GymSystem.BLL\GymSystem.BLL.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
 </Project>
