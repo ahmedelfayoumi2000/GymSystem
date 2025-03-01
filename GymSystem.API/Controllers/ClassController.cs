@@ -80,7 +80,7 @@ namespace GymSystem.API.Controllers
 		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
 		public async Task<IActionResult> CreateClass([FromBody] ClassDto classDto)
 		{
-			if (!IsValidModel(classDto))
+			if (!IsValidModel(classDto)) 
 			{
 				return BadRequest(CreateValidationError("Invalid class data"));
 			}
