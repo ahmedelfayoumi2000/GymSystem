@@ -18,12 +18,12 @@ namespace GymSystem.BLL.Dtos
 		[EmailAddress(ErrorMessage = "Invalid email format.")]
 		public string UserEmail { get; set; }
 
-		//[Required(ErrorMessage = "Class ID is required.")]
-		//[Range(1, int.MaxValue, ErrorMessage = "Class ID must be a positive integer.")]
-		//public int ClassId { get; set; }
+		[Required(ErrorMessage = "Class ID is required.")]
+		[Range(1, int.MaxValue, ErrorMessage = "Class ID must be a positive integer.")]
+		public int ClassId { get; set; }
 
 
-		//public string ClassName { get; set; }
+		public string ClassName { get; set; }
 
 
 		[Required(ErrorMessage = "Plan ID is required.")]
