@@ -9,10 +9,11 @@ namespace GymSystem.BLL.Specifications
 {
     public interface ISpecification<T>
     {
-        //Criteria == Where
-        public Expression<Func<T, bool>> Criteria { get; set; }
+		//Criteria == Where
 
-        public List<Expression<Func<T, object>>> Includes { get; set; }
+		Expression<Func<T, bool>> Criteria { get; }
+
+		public List<Expression<Func<T, object>>> Includes { get; set; }
 
         public Expression<Func<T, object>> OrderBy { get; set; } //p =>p.Name  p=> p.Price
         public Expression<Func<T, object>> OrderByDescending { get; set; }

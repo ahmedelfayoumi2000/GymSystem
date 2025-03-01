@@ -10,6 +10,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 namespace GymMangamentSystem.Apis.Controllers
@@ -25,13 +29,19 @@ namespace GymMangamentSystem.Apis.Controllers
 	{
 		private readonly UserManager<AppUser> _userManager;
 		private readonly ILogger<UserController> _logger;
+		private readonly RoleManager<IdentityRole> _roleManager;
+		private readonly IMapper _mapper;
+
+
 
 
 		public UserController(
+			RoleManager<IdentityRole> roleManager,
 			UserManager<AppUser> userManager,
-			ILogger<UserController> logger
-		   )
+			ILogger<UserController> logger,
+			IMapper mapper)
 		{
+			_roleManager = roleManager ?? throw new ArgumentNullException(nameof(roleManager));
 			_userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
 			_logger = logger ?? throw new ArgumentNullException(nameof(logger));
 		}
@@ -194,6 +204,15 @@ namespace GymMangamentSystem.Apis.Controllers
 				var currentRoles = await _userManager.GetRolesAsync(user);
 				var requestedRoles = model.Roles?.Where(r => r.IsSelected).Select(r => r.Name).ToList() ?? new List<string>();
 
+				// Verify requested roles exist
+				foreach (var role in requestedRoles)
+				{
+					if (!await _roleManager.RoleExistsAsync(role))
+					{
+						return BadRequest(new ApiResponse(400, $"Role '{role}' does not exist in the system."));
+					}
+				}
+
 				var rolesToAdd = requestedRoles.Except(currentRoles).ToList();
 				var rolesToRemove = currentRoles.Except(requestedRoles).ToList();
 
@@ -209,17 +228,6 @@ namespace GymMangamentSystem.Apis.Controllers
 					_logger.LogInformation("Added roles {Roles} to user ID: {UserId}", string.Join(", ", rolesToAdd), id);
 				}
 
-				if (rolesToRemove.Any())
-				{
-					var removeResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
-					if (!removeResult.Succeeded)
-					{
-						var errors = string.Join(", ", removeResult.Errors.Select(e => e.Description));
-						_logger.LogError("Failed to remove roles from user ID {UserId}: {Errors}", id, errors);
-						return BadRequest(new ApiResponse(400, $"Failed to remove roles: {errors}"));
-					}
-					_logger.LogInformation("Removed roles {Roles} from user ID: {UserId}", string.Join(", ", rolesToRemove), id);
-				}
 
 				if (!rolesToAdd.Any() && !rolesToRemove.Any())
 				{
