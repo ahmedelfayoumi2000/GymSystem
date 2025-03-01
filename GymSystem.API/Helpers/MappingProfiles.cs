@@ -70,6 +70,8 @@ namespace GymSystem.API.Helpers
 			//CreateMap<EquipmentDto, Equipment>().ReverseMap();
 			CreateMap<EquipmentCreateDto, Equipment>();
 			CreateMap<Equipment, EquipmentViewDto>();
+			CreateMap<MonthlyMembershipDto, MonthlyMembership>().ReverseMap();
+			CreateMap<PlanDto, Plan>().ReverseMap();
 		}
 	}
 }
