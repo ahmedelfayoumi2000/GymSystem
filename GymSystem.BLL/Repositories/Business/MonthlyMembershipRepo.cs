@@ -6,6 +6,7 @@ using GymSystem.BLL.Interfaces.Business;
 using GymSystem.BLL.Specifications;
 using GymSystem.BLL.Specifications.MonthlyMembershipWithRelationsSpeci;
 using GymSystem.DAL.Entities;
+using GymSystem.DAL.Entities.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
@@ -18,11 +19,13 @@ namespace GymSystem.BLL.Repositories
 	{
 		private readonly IUnitOfWork _unitOfWork;
 		private readonly IMapper _mapper;
+		private readonly IUserRepository _userRepository;
 
-		public MonthlyMembershipRepo(IUnitOfWork unitOfWork, IMapper mapper)
+		public MonthlyMembershipRepo(IUnitOfWork unitOfWork, IMapper mapper, IUserRepository userRepository)
 		{
 			_unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+			_userRepository = userRepository;
 		}
 
 		public async Task<IReadOnlyList<MonthlyMembershipDto>> GetAllAsync(SpecPrams specParams = null)
@@ -70,10 +73,24 @@ namespace GymSystem.BLL.Repositories
 
 			try
 			{
-				var membership = _mapper.Map<MonthlyMembership>(membershipDto);
-				await _unitOfWork.Repository<MonthlyMembership>().Add(membership);
+				// تحقق من وجود المستخدم، الفصل، والخطة في قاعدة البيانات
+				var user = await _userRepository.GetByIdAsync(membershipDto.UserId);
+				var classEntity = await _unitOfWork.Repository<Class>().GetByIdAsync(membershipDto.ClassId);
+				var planEntity = await _unitOfWork.Repository<Plan>().GetByIdAsync(membershipDto.PlanId);
 
+				if (user == null || classEntity == null || planEntity == null)
+				{
+					return new ApiResponse(404, "User, Class, or Plan not found.");
+				}
+
+				var membership = _mapper.Map<MonthlyMembership>(membershipDto);
+				membership.User = user;
+				membership.Class = classEntity;
+				membership.Plan = planEntity;
+
+				await _unitOfWork.Repository<MonthlyMembership>().Add(membership);
 				var result = await _unitOfWork.Complete();
+
 				if (result <= 0)
 				{
 					return new ApiResponse(500, "Failed to save the monthly membership to the database.");
@@ -84,11 +101,11 @@ namespace GymSystem.BLL.Repositories
 			}
 			catch (DbUpdateException ex)
 			{
-				return new ApiExceptionResponse(400, "Failed to create monthly membership due to database constraints.", ex.Message);
+				return new ApiExceptionResponse(400, "Database constraint error while creating monthly membership.", ex.InnerException?.Message ?? ex.Message);
 			}
 			catch (Exception ex)
 			{
-				return new ApiExceptionResponse(500, "An error occurred while creating the monthly membership", ex.Message);
+				return new ApiExceptionResponse(500, "An unexpected error occurred while creating the monthly membership.", ex.Message);
 			}
 		}
 

@@ -5,9 +5,9 @@ namespace GymSystem.BLL.Dtos
 {
 	public class MonthlyMembershipDto
 	{
+        public int? Id { get; set; }
 
-
-		[Required(ErrorMessage = "User ID is required.")]
+        [Required(ErrorMessage = "User ID is required.")]
 		public string UserId { get; set; }
 
 		[Required(ErrorMessage = "User name is required.")]

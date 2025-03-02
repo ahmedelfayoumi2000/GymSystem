@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace GymSystem.DAL.Entities.Identity
 {
-	public class AppUser : IdentityUser
+	public class AppUser : IdentityUser 
 	{
 		public string DisplayName { get; set; }
 		public Address? Address { get; set; }
@@ -14,6 +14,8 @@ namespace GymSystem.DAL.Entities.Identity
 		public string? UserCode { get; set; }
 		public string Gender { get; set; }
 		public uint? Age { get; set; }
+		public decimal? Salary { get; set; }
+
 		public DateTime StartDate { get; set; } = DateTime.Now;
 
 		private DateTime _endDate;

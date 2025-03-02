@@ -90,6 +90,15 @@ namespace GymSystem.API.Controllers
 					Message = "Invalid plan data"
 				});
 			}
+			if (planDto.DurationDays <= 0 || planDto.DurationDays > 366)
+			{
+				return BadRequest(new ApiValidationErrorResponse
+				{
+					Errors = new List<string> { "DurationDays  must be a positive integer and not more than 1 Year" },
+					StatusCode = 400,
+					Message = "Invalid request data"
+				});
+			}
 
 			try
 			{
@@ -126,6 +135,16 @@ namespace GymSystem.API.Controllers
 					Message = "Invalid request data"
 				});
 			}
+			if (planDto.DurationDays <= 0 || planDto.DurationDays >366)
+			{
+				return BadRequest(new ApiValidationErrorResponse
+				{
+					Errors = new List<string> { "DurationDays  must be a positive integer and not more than 1 Year" },
+					StatusCode = 400,
+					Message = "Invalid request data"
+				});
+			}
+
 
 			if (!ModelState.IsValid || planDto == null)
 			{

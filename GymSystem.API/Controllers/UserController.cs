@@ -229,13 +229,23 @@ namespace GymMangamentSystem.Apis.Controllers
 				}
 
 
-				if (!rolesToAdd.Any() && !rolesToRemove.Any())
+				if (rolesToRemove.Any())
 				{
-					_logger.LogInformation("No role changes detected for user ID: {UserId}", id);
+					var removeResult = await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
+					if (!removeResult.Succeeded)
+					{
+						var errors = string.Join(", ", removeResult.Errors.Select(e => e.Description));
+						_logger.LogError("Failed to remove roles from user ID {UserId}: {Errors}", id, errors);
+						return BadRequest(new ApiResponse(400, $"Failed to remove roles: {errors}"));
+					}
+					_logger.LogInformation("Removed roles {Roles} from user ID: {UserId}", string.Join(", ", rolesToRemove), id);
 				}
 
+				// ✅ إحضار الأدوار المحدّثة وإرجاعها
+				var updatedRoles = await _userManager.GetRolesAsync(user);
+
 				_logger.LogInformation("User roles updated successfully for ID: {UserId}", id);
-				return Ok(new ApiResponse(200, "User roles updated successfully"));
+				return Ok(new ApiResponse(200, "User roles updated successfully", updatedRoles));
 			}
 			catch (Exception ex)
 			{

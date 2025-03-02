@@ -11,15 +11,16 @@ namespace GymSystem.DAL.Entities.Identity
     [Owned]
     public class Address
     {
-        public int ID { get; set; }
-        public string FristName { get; set; }
-        public string LastName { get; set; }
-        public string Country { get; set; }
-        public string City { get; set; }
-        public string Street { get; set; }
+		public string Country { get; set; }
+		public string City { get; set; }
+		public string Street { get; set; }
 
-        //public string AppUserId { get; set; }
-        //public AppUser User { get; set; }
+		// ملهمش لازمه
+		//public int ID { get; set; }
+		//public string FristName { get; set; }
+		//public string LastName { get; set; }
+		//public string AppUserId { get; set; }
+		//public AppUser User { get; set; }
 
-    }
+	}
 }

@@ -20,13 +20,13 @@ namespace GymSystem.API.Helpers
 				.ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
 				.ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
 				.ForMember(dest => dest.Age, opt => opt.MapFrom(src => src.Age))
-				.ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.StartDate))
-				.ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => src.EndDate))
+				//.ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.StartDate))
+				//.ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => src.EndDate))
 				.ForMember(dest => dest.IsStopped, opt => opt.MapFrom(src => src.IsStopped))
 				.ForMember(dest => dest.HaveDays, opt => opt.MapFrom(src => src.HaveDays))
 				.ForMember(dest => dest.AddBy, opt => opt.MapFrom(src => src.AddBy))
 				.ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
-				.ForMember(dest => dest.RemainingDays, opt => opt.MapFrom(src => src.RemainingDays));
+		   	    .ForMember(dest => dest.Salary, opt => opt.MapFrom(src => src.Salary));
 
 
 			// Map from CreateTrainerDto to AppUser
@@ -37,10 +37,11 @@ namespace GymSystem.API.Helpers
 				.ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
 				.ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
 				 .ForMember(dest => dest.Age, opt => opt.MapFrom(src => src.Age))
-				.ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.StartDate))
-				.ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => src.EndDate))
+				//.ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.StartDate))
+				//.ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => src.EndDate))
 				.ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
-				.ForMember(dest => dest.UserRole, opt => opt.MapFrom(src => 2)); // Trainer Role
+				.ForMember(dest => dest.UserRole, opt => opt.MapFrom(src => 2)) // Trainer Role
+			    .ForMember(dest => dest.Salary, opt => opt.MapFrom(src => src.Salary));
 
 			// Map from UpdateTrainerDto to AppUser
 			CreateMap<UpdateTrainerDto, AppUser>()
@@ -48,9 +49,10 @@ namespace GymSystem.API.Helpers
 				.ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
 				.ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender))
 				 .ForMember(dest => dest.Age, opt => opt.MapFrom(src => src.Age))
-				.ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.StartDate))
-				.ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => src.EndDate))
-			   .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address));
+				//.ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => src.StartDate))
+				//.ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => src.EndDate))
+			   .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+			   .ForMember(dest => dest.Salary, opt => opt.MapFrom(src => src.Salary));
 			//====================================================================================
 
 
@@ -70,7 +72,24 @@ namespace GymSystem.API.Helpers
 			//CreateMap<EquipmentDto, Equipment>().ReverseMap();
 			CreateMap<EquipmentCreateDto, Equipment>();
 			CreateMap<Equipment, EquipmentViewDto>();
-			CreateMap<MonthlyMembershipDto, MonthlyMembership>().ReverseMap();
+			//CreateMap<MonthlyMembershipDto, MonthlyMembership>().ReverseMap();
+
+			CreateMap<MonthlyMembership, MonthlyMembershipDto>()
+		   .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User != null ? src.User.UserName : null))
+		   .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User != null ? src.User.Email : null))
+		   .ForMember(dest => dest.ClassName, opt => opt.MapFrom(src => src.Class != null ? src.Class.ClassName : null))
+		   .ForMember(dest => dest.PlanName, opt => opt.MapFrom(src => src.Plan != null ? src.Plan.PlanName : null));
+
+			//	CreateMap<MonthlyMembershipDto, MonthlyMembership>()
+			//.ForMember(dest => dest.User, opt => opt.MapFrom(src => new AppUser { Id = src.UserId }))
+			//.ForMember(dest => dest.Class, opt => opt.MapFrom(src => new Class { Id = src.ClassId }))
+			//.ForMember(dest => dest.Plan, opt => opt.MapFrom(src => new Plan { Id = src.PlanId }));
+
+			CreateMap<MonthlyMembershipDto, MonthlyMembership>()
+           .ForMember(dest => dest.User, opt => opt.Ignore())  // ✅ نتجاهل التحديث التلقائي
+           .ForMember(dest => dest.Class, opt => opt.Ignore()) // ✅ نتجاهل التحديث التلقائي
+           .ForMember(dest => dest.Plan, opt => opt.Ignore()); // ✅ نتجاهل التحديث التلقائي
+
 			CreateMap<PlanDto, Plan>().ReverseMap();
 		}
 	}

@@ -10,7 +10,7 @@ namespace GymSystem.BLL.Interfaces
     public interface IUnitOfWork : IDisposable
     {
         IGenericRepository<TEntity> Repository<TEntity>() where TEntity : BaseEntity;
-
-        Task<int> Complete();
+		void DetachEntity<TEntity>(TEntity entity) where TEntity : class;
+		Task<int> Complete();
     }
 }

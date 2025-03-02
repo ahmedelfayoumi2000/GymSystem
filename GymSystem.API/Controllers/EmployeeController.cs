@@ -67,7 +67,8 @@ namespace GymSystem.API.Controllers
 					DisplayName = u.DisplayName,
 					Email = u.Email,
 					UserRole = u.UserRole,
-					Gender = u.Gender
+					Gender = u.Gender,
+					Salary=u.Salary
 				}).ToList();
 
 				return Ok(new ApiResponse(200, "Employees retrieved successfully", new { Items = employeeList, TotalItems = totalItems }));
@@ -104,7 +105,8 @@ namespace GymSystem.API.Controllers
 					Email = employeeDto.Email,
 					DisplayName = employeeDto.DisplayName,
 					UserRole = employeeDto.UserRole,
-					Gender = employeeDto.Gender
+					Gender = employeeDto.Gender,
+					Salary=employeeDto.Salary
 				};
 
 				var result = await _userManager.CreateAsync(user, "DefaultPassword123!"); // كلمة مرور افتراضية
@@ -122,7 +124,7 @@ namespace GymSystem.API.Controllers
 				};
 				await _userManager.AddToRoleAsync(user, role);
 
-				return StatusCode(StatusCodes.Status201Created, new ApiResponse(201, "Employee created successfully", new { Id = user.Id }));
+				return StatusCode(StatusCodes.Status201Created, new ApiResponse(201, "Employee created successfully", new { Id = user.Id , user.UserRole ,Salary=user.Salary}));
 			}
 			catch (Exception ex)
 			{
