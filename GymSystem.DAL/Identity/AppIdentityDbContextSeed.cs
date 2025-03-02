@@ -28,8 +28,6 @@ namespace GymSystem.DAL.Identity
 				EmailConfirmed = true,
 				Address = new Address
 				{
-					FristName = "Mohamed",
-					LastName = "salah",
 					Country = "Egypt",
 					City = "Menouf",
 					Street = "Tarek Barhim"

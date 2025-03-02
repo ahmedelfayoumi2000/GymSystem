@@ -2,6 +2,7 @@
 using GymSystem.DAL.Data;
 using GymSystem.DAL.Entities;
 using GymSystem.DAL.Identity;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -48,5 +49,13 @@ namespace GymSystem.BLL.Repositories
             return (IGenericRepository<TEntity>)_repostories[type];
 
         }
-    }
+		public void DetachEntity<TEntity>(TEntity entity) where TEntity : class
+		{
+			var entry = _context.Entry(entity);
+			if (entry != null)
+			{
+				entry.State = EntityState.Detached;
+			}
+		}
+	}
 }
