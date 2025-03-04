@@ -2,13 +2,13 @@
 using GymSystem.DAL.Entities;
 using Microsoft.IdentityModel.Tokens;
 
-public class MonthlyMembershipWithFiltersSpecification : BaseSpecification<MonthlyMembership>
+public class MonthlyMembershipWithFiltersSpecification : BaseSpecification<MonthlyMembershipp>
 {
 	public MonthlyMembershipWithFiltersSpecification(SpecPrams specParams) : base()
 	{
 		if (!string.IsNullOrEmpty(specParams.Search))
 		{
-			Criteria = m => m.User.DisplayName.ToLower().Contains(specParams.Search.ToLower());
+			Criteria = m => m.UserName.ToLower().Contains(specParams.Search.ToLower());
 		}
 
 		if (!string.IsNullOrEmpty(specParams.Sort))
@@ -38,8 +38,8 @@ public class MonthlyMembershipWithFiltersSpecification : BaseSpecification<Month
 			ApplyPagination((specParams.PageIndex - 1) * specParams.PageSize, specParams.PageSize);
 		}
 
-		AddIncludes(m => m.User);
-		AddIncludes(m => m.Class);
+		//AddIncludes(m => m.User);
+		//AddIncludes(m => m.Class);
 		AddIncludes(m => m.Plan);
 	}
 }

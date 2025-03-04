@@ -1,6 +1,10 @@
-﻿using GymSystem.BLL.Dtos;
+﻿using AutoMapper;
+using GymMangamentSystem.Apis.Controllers;
+using GymSystem.API.DTOs.Trainer;
+using GymSystem.BLL.Dtos;
 using GymSystem.BLL.Errors;
 using GymSystem.BLL.Specifications;
+using GymSystem.DAL.Entities;
 using GymSystem.DAL.Entities.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -19,12 +23,19 @@ namespace GymSystem.API.Controllers
 	public class EmployeeController : BaseApiController
 	{
 		private readonly UserManager<AppUser> _userManager;
+		private readonly ILogger<UserController> _logger;
 		private readonly RoleManager<IdentityRole> _roleManager;
+		private readonly IMapper _mapper;
 
-		public EmployeeController(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
+		public EmployeeController(UserManager<AppUser> userManager,
+			                      ILogger<UserController> logger,
+			                      RoleManager<IdentityRole> roleManager,
+			                      IMapper mapper)
 		{
 			_userManager = userManager;
+			_logger = logger;
 			_roleManager = roleManager;
+			_mapper = mapper;
 		}
 
 		[Authorize(Roles = "Admin")]
@@ -101,15 +112,15 @@ namespace GymSystem.API.Controllers
 			{
 				var user = new AppUser
 				{
-					UserName = employeeDto.Email,
-					Email = employeeDto.Email,
+					UserName = employeeDto.DisplayName,
 					DisplayName = employeeDto.DisplayName,
+					Email = employeeDto.Email,
 					UserRole = employeeDto.UserRole,
 					Gender = employeeDto.Gender,
 					Salary=employeeDto.Salary
 				};
 
-				var result = await _userManager.CreateAsync(user, "DefaultPassword123!"); // كلمة مرور افتراضية
+				var result = await _userManager.CreateAsync(user, employeeDto.PassWord); 
 				if (!result.Succeeded)
 				{
 					return BadRequest(new ApiResponse(400, "Failed to create employee.", result.Errors));
@@ -132,6 +143,101 @@ namespace GymSystem.API.Controllers
 					new ApiExceptionResponse(500, "An error occurred while creating the employee", ex.Message));
 			}
 		}
+
+
+//		[Authorize(Roles = "Admin")]
+		[HttpPut("{id}")]
+		[ProducesResponseType(StatusCodes.Status200OK)]
+		[ProducesResponseType(StatusCodes.Status400BadRequest)]
+		[ProducesResponseType(StatusCodes.Status404NotFound)]
+		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
+		public async Task<IActionResult> UpdateEmployee(string id, [FromBody] EmployeeDto employeeDto)
+		{
+			if (!ModelState.IsValid || employeeDto == null)
+			{
+				return BadRequest(new ApiValidationErrorResponse
+				{
+					Errors = ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage)).ToList(),
+					StatusCode = 400,
+					Message = "Invalid employee update data"
+				});
+			}
+
+			if (id != employeeDto.Id)
+			{
+				_logger.LogWarning("Mismatch between route ID {RouteId} and model ID {ModelId}", id, employeeDto.Id);
+				return BadRequest(new ApiResponse(400, "Employee ID in route and model must match"));
+			}
+
+			try
+			{
+				_logger.LogInformation("Searching for Employee with ID: {EmployeeId}", id);
+
+				var employee = await _userManager.FindByIdAsync(id);
+				if (employee == null)
+				{
+					_logger.LogWarning("Employee with ID {EmployeeId} not found.", id);
+					return NotFound(new ApiResponse(404, $"Employee with ID {id} not found"));
+				}
+
+				// تحديث البيانات
+				employee.DisplayName = employeeDto.DisplayName;
+				employee.Gender = employeeDto.Gender;
+				employee.Salary = employeeDto.Salary;
+
+				// التحقق من تغيير البريد الإلكتروني
+				if (!string.Equals(employee.Email, employeeDto.Email, StringComparison.OrdinalIgnoreCase))
+				{
+					var existingUser = await _userManager.FindByEmailAsync(employeeDto.Email);
+					if (existingUser != null && existingUser.Id != employee.Id)
+					{
+						return BadRequest(new ApiResponse(400, "Email is already in use by another user."));
+					}
+					employee.Email = employeeDto.Email;
+					employee.NormalizedEmail = employeeDto.Email.ToUpper();
+				}
+
+				// إزالة جميع الأدوار القديمة وإضافة الدور الجديد
+				var currentRoles = await _userManager.GetRolesAsync(employee);
+				await _userManager.RemoveFromRolesAsync(employee, currentRoles);
+
+				var newRole = employeeDto.UserRole switch
+				{
+					1 => "Admin",
+					2 => "Trainer",
+					3 => "Receptionist",
+					_ => "Member"
+				};
+
+				var roleExists = await _roleManager.RoleExistsAsync(newRole);
+				if (!roleExists)
+				{
+					return BadRequest(new ApiResponse(400, $"Role '{newRole}' does not exist."));
+				}
+
+				await _userManager.AddToRoleAsync(employee, newRole);
+
+				// حفظ التعديلات
+				var updateResult = await _userManager.UpdateAsync(employee);
+				if (!updateResult.Succeeded)
+				{
+					var errors = string.Join(", ", updateResult.Errors.Select(e => e.Description));
+					_logger.LogError("Failed to update Employee details for ID {EmployeeId}: {Errors}", id, errors);
+					return BadRequest(new ApiResponse(400, $"Failed to update Employee: {errors}"));
+				}
+
+				_logger.LogInformation("Employee details updated successfully for ID: {EmployeeId}", id);
+				return Ok(new ApiResponse(200, "User updated successfully"));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Error updating employee details for ID: {EmployeeId}", id);
+				return StatusCode(500, new ApiResponse(500, "An unexpected error occurred."));
+			}
+		}
+
+
+
 	}
 
 }

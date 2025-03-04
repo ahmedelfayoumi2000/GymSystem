@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using GymSystem.BLL.Dtos;
+using GymSystem.BLL.Dtos.MonthlyMembership;
 using GymSystem.BLL.Errors;
 using GymSystem.BLL.Interfaces;
 using GymSystem.BLL.Interfaces.Business;
@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace GymSystem.BLL.Repositories
 {
-	public class MonthlyMembershipRepo : IMonthlyMembershipRepo
+    public class MonthlyMembershipRepo : IMonthlyMembershipRepo
 	{
 		private readonly IUnitOfWork _unitOfWork;
 		private readonly IMapper _mapper;
@@ -28,18 +28,18 @@ namespace GymSystem.BLL.Repositories
 			_userRepository = userRepository;
 		}
 
-		public async Task<IReadOnlyList<MonthlyMembershipDto>> GetAllAsync(SpecPrams specParams = null)
+		public async Task<IReadOnlyList<MonthlyMembershipViewDto>> GetAllAsync(SpecPrams specParams = null)
 		{
 			try
 			{
-				ISpecification<MonthlyMembership> spec = specParams != null
+				ISpecification<MonthlyMembershipp> spec = specParams != null
 					? new MonthlyMembershipWithFiltersSpecification(specParams)
 					: new MonthlyMembershipWithRelationsSpecification();
 
-				var memberships = await _unitOfWork.Repository<MonthlyMembership>()
+				var memberships = await _unitOfWork.Repository<MonthlyMembershipp>()
 					.GetAllWithSpecAsync(spec);
 
-				var membershipDtos = memberships.Select(m => _mapper.Map<MonthlyMembershipDto>(m)).ToList();
+				var membershipDtos = memberships.Select(m => _mapper.Map<MonthlyMembershipViewDto>(m)).ToList();
 				return membershipDtos.AsReadOnly();
 			}
 			catch (Exception ex)
@@ -48,23 +48,22 @@ namespace GymSystem.BLL.Repositories
 			}
 		}
 
-		public async Task<MonthlyMembershipDto> GetByIdAsync(int id)
+		public async Task<MonthlyMembershipViewDto> GetByEmailAsync(string email)
 		{
 			try
 			{
-				var spec = new MonthlyMembershipWithRelationsSpecification(m => m.Id == id);
-				var membership = await _unitOfWork.Repository<MonthlyMembership>()
-					.GetByIdWithSpecAsync(spec);
+				var membership = await _unitOfWork.Repository<MonthlyMembershipp>()
+					.GetByEmailAsync<MonthlyMembershipp>(email);
 
-				return membership == null ? null : _mapper.Map<MonthlyMembershipDto>(membership);
+				return membership == null ? null : _mapper.Map<MonthlyMembershipViewDto>(membership);
 			}
 			catch (Exception ex)
 			{
-				throw new Exception($"Failed to retrieve monthly membership with ID {id} from the database.", ex);
+				throw new Exception($"Failed to retrieve monthly membership with this email {email} from the database.", ex);
 			}
 		}
 
-		public async Task<ApiResponse> CreateAsync(MonthlyMembershipDto membershipDto)
+		public async Task<ApiResponse> CreateAsync(MonthlyMembershipCreateDto membershipDto)
 		{
 			if (membershipDto == null)
 			{
@@ -72,23 +71,26 @@ namespace GymSystem.BLL.Repositories
 			}
 
 			try
-			{
-				// تحقق من وجود المستخدم، الفصل، والخطة في قاعدة البيانات
-				var user = await _userRepository.GetByIdAsync(membershipDto.UserId);
-				var classEntity = await _unitOfWork.Repository<Class>().GetByIdAsync(membershipDto.ClassId);
-				var planEntity = await _unitOfWork.Repository<Plan>().GetByIdAsync(membershipDto.PlanId);
-
-				if (user == null || classEntity == null || planEntity == null)
+			{ 
+				var membership = await _unitOfWork.Repository<MonthlyMembershipp>()
+				.GetByEmailAsync<MonthlyMembershipp>(membershipDto.UserEmail);
+				if (membership != null)
 				{
-					return new ApiResponse(404, "User, Class, or Plan not found.");
+					return new ApiResponse(409, "there is a membership with this email .");
 				}
 
-				var membership = _mapper.Map<MonthlyMembership>(membershipDto);
-				membership.User = user;
-				membership.Class = classEntity;
-				membership.Plan = planEntity;
+				// ✅ جلب بيانات الخطة بناءً على PlanId
+				var planEntity = await _unitOfWork.Repository<Plan>().GetByIdAsync(membershipDto.PlanId);
+				if (planEntity == null)
+				{
+					return new ApiResponse(404, "Plan not found.");
+				}
 
-				await _unitOfWork.Repository<MonthlyMembership>().Add(membership);
+				 membership = _mapper.Map<MonthlyMembershipp>(membershipDto);
+				 membership.Plan = planEntity;
+				membership.EndDate = membership.StartDate.AddDays(planEntity.DurationDays);
+
+				await _unitOfWork.Repository<MonthlyMembershipp>().Add(membership);
 				var result = await _unitOfWork.Complete();
 
 				if (result <= 0)
@@ -96,12 +98,8 @@ namespace GymSystem.BLL.Repositories
 					return new ApiResponse(500, "Failed to save the monthly membership to the database.");
 				}
 
-				var createdDto = _mapper.Map<MonthlyMembershipDto>(membership);
+				var createdDto = _mapper.Map<MonthlyMembershipViewDto>(membership);
 				return new ApiResponse(201, "Monthly membership created successfully", createdDto);
-			}
-			catch (DbUpdateException ex)
-			{
-				return new ApiExceptionResponse(400, "Database constraint error while creating monthly membership.", ex.InnerException?.Message ?? ex.Message);
 			}
 			catch (Exception ex)
 			{
@@ -109,70 +107,77 @@ namespace GymSystem.BLL.Repositories
 			}
 		}
 
-		public async Task<ApiResponse> UpdateAsync(int id, MonthlyMembershipDto membershipDto)
-		{
-			if (id <= 0)
-			{
-				return new ApiResponse(400, "Monthly membership ID must be a positive integer.");
-			}
 
-			if (membershipDto == null)
+		public async Task<ApiResponse> UpdateAsync(string email, MonthlyMembershipCreateDto membershipDto)
+		{
+			if (string.IsNullOrEmpty(email))
 			{
-				return new ApiResponse(400, "Monthly membership data cannot be null.");
+				return new ApiResponse(400, "Monthly membership Email must be a value.");
 			}
 
 			try
 			{
-				var spec = new MonthlyMembershipWithRelationsSpecification(m => m.Id == id);
-				var existingMembership = await _unitOfWork.Repository<MonthlyMembership>()
-					.GetByIdWithSpecAsync(spec);
+				var existingMembership = await _unitOfWork.Repository<MonthlyMembershipp>()
+					.GetByEmailAsync<MonthlyMembershipp>(email);
 
 				if (existingMembership == null)
 				{
-					return new ApiResponse(404, $"Monthly membership with ID {id} not found.");
+					return new ApiResponse(404, $"Membership with email {email} not found.");
+				}
+
+				// ✅ تحديث بيانات الخطة إذا تم تغيير الـ PlanId
+				if (existingMembership.Plan == null || existingMembership.Plan.Id != membershipDto.PlanId)
+				{
+					var newPlan = await _unitOfWork.Repository<Plan>().GetByIdAsync(membershipDto.PlanId);
+					if (newPlan == null)
+					{
+						return new ApiResponse(404, "New plan not found.");
+					}
+
+					existingMembership.Plan = newPlan;
+
+					// ✅ تحديث EndDate بعد تغيير الخطة
+					existingMembership.EndDate = existingMembership.StartDate.AddDays(newPlan.DurationDays);
 				}
 
 				_mapper.Map(membershipDto, existingMembership);
-				_unitOfWork.Repository<MonthlyMembership>().Update(existingMembership);
+				_unitOfWork.Repository<MonthlyMembershipp>().Update(existingMembership);
 
 				var result = await _unitOfWork.Complete();
 				if (result <= 0)
 				{
-					return new ApiResponse(500, "Failed to update the monthly membership in the database.");
+					return new ApiResponse(500, "Failed to update the monthly membership.");
 				}
 
-				var updatedDto = _mapper.Map<MonthlyMembershipDto>(existingMembership);
+				var updatedDto = _mapper.Map<MonthlyMembershipViewDto>(existingMembership);
 				return new ApiResponse(200, "Monthly membership updated successfully", updatedDto);
-			}
-			catch (DbUpdateException ex)
-			{
-				return new ApiExceptionResponse(400, "Failed to update monthly membership due to database constraints.", ex.Message);
 			}
 			catch (Exception ex)
 			{
-				return new ApiExceptionResponse(500, "An error occurred while updating the monthly membership", ex.Message);
+				return new ApiExceptionResponse(500, "An error occurred while updating the membership.", ex.Message);
 			}
 		}
 
-		public async Task<ApiResponse> DeleteAsync(int id)
+
+
+		public async Task<ApiResponse> DeleteAsync(string email)
 		{
-			if (id <= 0)
+			if (email == null)
 			{
-				return new ApiResponse(400, "Monthly membership ID must be a positive integer.");
+				return new ApiResponse(400, "Monthly membership Email must be a VAlue.");
 			}
 
 			try
 			{
-				var spec = new MonthlyMembershipWithRelationsSpecification(m => m.Id == id);
-				var membership = await _unitOfWork.Repository<MonthlyMembership>()
-					.GetByIdWithSpecAsync(spec);
+				var membership = await _unitOfWork.Repository<MonthlyMembershipp>()
+				.GetByEmailAsync<MonthlyMembershipp>(email);
 
 				if (membership == null)
 				{
-					return new ApiResponse(404, $"Monthly membership with ID {id} not found.");
+					return new ApiResponse(404, $"Monthly membership with Email {email} not found.");
 				}
 
-				_unitOfWork.Repository<MonthlyMembership>().Delete(membership);
+				_unitOfWork.Repository<MonthlyMembershipp>().Delete(membership);
 
 				var result = await _unitOfWork.Complete();
 				if (result <= 0)

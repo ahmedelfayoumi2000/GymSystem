@@ -4,6 +4,7 @@ using GymSystem.DAL.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GymSystem.DAL.Data.Migrations
 {
     [DbContext(typeof(AppIdentityDbContext))]
-    partial class AppIdentityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250303222451_addRepairEquipment")]
+    partial class addRepairEquipment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -551,7 +554,7 @@ namespace GymSystem.DAL.Data.Migrations
                     b.ToTable("Memberships");
                 });
 
-            modelBuilder.Entity("GymSystem.DAL.Entities.MonthlyMembershipp", b =>
+            modelBuilder.Entity("GymSystem.DAL.Entities.MonthlyMembership", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -559,8 +562,11 @@ namespace GymSystem.DAL.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime?>("EndDate")
+                    b.Property<int?>("ClassId")
                         .IsRequired()
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("IsActive")
@@ -575,23 +581,20 @@ namespace GymSystem.DAL.Data.Migrations
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("UserEmail")
+                    b.Property<string>("UserId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("UserName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("phoneNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ClassId");
+
                     b.HasIndex("PlanId");
 
-                    b.ToTable("monthlyMembership");
+                    b.HasIndex("UserId");
+
+                    b.ToTable("monthlyMemberships");
                 });
 
             modelBuilder.Entity("GymSystem.DAL.Entities.Notification", b =>
@@ -670,35 +673,6 @@ namespace GymSystem.DAL.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Plans");
-                });
-
-            modelBuilder.Entity("GymSystem.DAL.Entities.Product", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("Count")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Product");
                 });
 
             modelBuilder.Entity("GymSystem.DAL.Entities.Repair", b =>
@@ -1147,15 +1121,31 @@ namespace GymSystem.DAL.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("GymSystem.DAL.Entities.MonthlyMembershipp", b =>
+            modelBuilder.Entity("GymSystem.DAL.Entities.MonthlyMembership", b =>
                 {
+                    b.HasOne("GymSystem.DAL.Entities.Class", "Class")
+                        .WithMany("MonthlyMemberships")
+                        .HasForeignKey("ClassId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("GymSystem.DAL.Entities.Plan", "Plan")
                         .WithMany()
                         .HasForeignKey("PlanId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("GymSystem.DAL.Entities.Identity.AppUser", "User")
+                        .WithMany("MonthlyMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Class");
+
                     b.Navigation("Plan");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("GymSystem.DAL.Entities.Notification", b =>
@@ -1247,6 +1237,8 @@ namespace GymSystem.DAL.Data.Migrations
                     b.Navigation("DailyAttendances");
 
                     b.Navigation("Memberships");
+
+                    b.Navigation("MonthlyMemberships");
                 });
 
             modelBuilder.Entity("GymSystem.DAL.Entities.Equipment", b =>
@@ -1274,6 +1266,8 @@ namespace GymSystem.DAL.Data.Migrations
                     b.Navigation("Feedbacks");
 
                     b.Navigation("MaintainedEquipments");
+
+                    b.Navigation("MonthlyMemberships");
 
                     b.Navigation("Notifications");
 

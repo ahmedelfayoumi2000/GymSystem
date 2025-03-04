@@ -1,4 +1,4 @@
-﻿using GymSystem.BLL.Dtos;
+﻿using GymSystem.BLL.Dtos.MonthlyMembership;
 using GymSystem.BLL.Errors;
 using GymSystem.BLL.Specifications;
 using System.Collections.Generic;
@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace GymSystem.BLL.Interfaces.Business
 {
-	public interface IMonthlyMembershipRepo
+    public interface IMonthlyMembershipRepo
 	{
-		Task<IReadOnlyList<MonthlyMembershipDto>> GetAllAsync(SpecPrams specParams = null);
-		Task<MonthlyMembershipDto> GetByIdAsync(int id);
-		Task<ApiResponse> CreateAsync(MonthlyMembershipDto membershipDto);
-		Task<ApiResponse> UpdateAsync(int id, MonthlyMembershipDto membershipDto);
-		Task<ApiResponse> DeleteAsync(int id);
+		Task<IReadOnlyList<MonthlyMembershipViewDto>> GetAllAsync(SpecPrams specParams = null);
+		Task<MonthlyMembershipViewDto> GetByEmailAsync(string email);
+		Task<ApiResponse> CreateAsync(MonthlyMembershipCreateDto membershipDto);
+		Task<ApiResponse> UpdateAsync(string email, MonthlyMembershipCreateDto membershipDto);
+		Task<ApiResponse> DeleteAsync(string email);
 	}
 }

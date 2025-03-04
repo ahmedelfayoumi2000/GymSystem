@@ -12,10 +12,10 @@ namespace GymSystem.DAL.Entities
 		public bool IsDeleted { get; set; }
 
 		public string? UserId { get; set; }
-		public AppUser User { get; set; }
+		public AppUser? User { get; set; }
 
 		// العلاقة مع Class (واحد إلى واحد اختياري)
-		public int ClassId { get; set; }
-		public Class Class { get; set; }
+		public int? ClassId { get; set; }
+		public Class? Class { get; set; }
 	}
 }

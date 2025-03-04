@@ -42,7 +42,6 @@ namespace GymSystem.DAL.Entities.Identity
 		public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 
 		public ICollection<DailyAttendance> DailyAttendances { get; set; } = new List<DailyAttendance>();
-		public ICollection<MonthlyMembership> MonthlyMemberships { get; set; } = new List<MonthlyMembership>();
 
 		public int? NutritionPlanId { get; set; }
 		public NutritionPlan nutritionPlan { get; set; }

@@ -4,18 +4,18 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace GymSystem.DAL.Configurations
 {
-	public class MonthlyMembershipConfiguration : IEntityTypeConfiguration<MonthlyMembership>
+	public class MonthlyMembershipConfiguration : IEntityTypeConfiguration<MonthlyMembershipp>
 	{
-		public void Configure(EntityTypeBuilder<MonthlyMembership> builder)
+		public void Configure(EntityTypeBuilder<MonthlyMembershipp> builder)
 		{
 			builder.HasKey(m => m.Id);
 
-			builder.Property(m => m.UserId)
-				   .IsRequired()
-				   .HasMaxLength(450);
+			//builder.Property(m => m.UserId)
+			//	   .IsRequired()
+			//	   .HasMaxLength(450);
 
-			builder.Property(m => m.ClassId)
-				   .IsRequired();
+			//builder.Property(m => m.ClassId)
+			//	   .IsRequired();
 
 			builder.Property(m => m.PlanId)
 				   .IsRequired();
@@ -30,15 +30,15 @@ namespace GymSystem.DAL.Configurations
 				   .IsRequired()
 				   .HasDefaultValue(true);
 
-			builder.HasOne(m => m.User)
-				   .WithMany(u => u.MonthlyMemberships)
-				   .HasForeignKey(m => m.UserId)
-				   .OnDelete(DeleteBehavior.Restrict);
+			//builder.HasOne(m => m.User)
+			//	   .WithMany(u => u.MonthlyMemberships)
+			//	   .HasForeignKey(m => m.UserId)
+			//	   .OnDelete(DeleteBehavior.Restrict);
 
-			builder.HasOne(m => m.Class)
-				   .WithMany(c => c.MonthlyMemberships)
-				   .HasForeignKey(m => m.ClassId)
-				   .OnDelete(DeleteBehavior.Cascade);
+			//builder.HasOne(m => m.Class)
+			//	   .WithMany(c => c.MonthlyMemberships)
+			//	   .HasForeignKey(m => m.ClassId)
+			//	   .OnDelete(DeleteBehavior.Cascade);
 
 			builder.HasOne(m => m.Plan)
 				   .WithMany()

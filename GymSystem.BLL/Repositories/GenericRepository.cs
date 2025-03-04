@@ -2,6 +2,7 @@
 using GymSystem.BLL.Specifications;
 using GymSystem.DAL.Data;
 using GymSystem.DAL.Entities;
+using GymSystem.DAL.Entities.Identity;
 using GymSystem.DAL.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +20,19 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
     public async Task<T> GetByIdAsync(int id)
       => await _context.Set<T>().FindAsync(id);
 
-    public async Task<IReadOnlyList<T>> GetAllWithSpecAsync(ISpecification<T> spec)
+	public async Task<List<T>> GetRepairByEquipmentIdAsync(int equipmentId)
+	{
+		if (typeof(T) == typeof(Repair))
+		{
+			return await _context.Set<Repair>()
+								 .Where(r => r.EquipmentId == equipmentId)
+								 .ToListAsync() as List<T>;
+		}
+		throw new NotSupportedException("This method is only supported for Repair entity.");
+	}
+
+
+	public async Task<IReadOnlyList<T>> GetAllWithSpecAsync(ISpecification<T> spec)
         => await ApplySpecifications(spec).ToListAsync();
         
         
@@ -42,5 +55,15 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
    
     public void Delete(T entity)
       => _context.Set<T>().Remove(entity);
+
+	  public async Task<T> GetEntityWithSpecAsync(ISpecification<T> spec)
+    {
+        return await ApplySpecifications(spec).FirstOrDefaultAsync();
+    }
+
+	public async Task<T> GetByEmailAsync<T>(string email) where T : class
+	{
+		return await _context.Set<T>().FirstOrDefaultAsync(u => EF.Property<string>(u, "UserEmail") == email);
+	}
 
 }

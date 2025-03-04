@@ -148,6 +148,7 @@ namespace GymSystem.API.Controllers
 			}
 		}
 
+
 		#region Private Helper Methods
 
 		private bool IsValidId(int id) => id > 0;
