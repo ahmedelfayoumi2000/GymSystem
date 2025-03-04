@@ -1,4 +1,4 @@
-﻿using GymSystem.BLL.Dtos;
+﻿using GymSystem.BLL.Dtos.MonthlyMembership;
 using GymSystem.BLL.Errors;
 using GymSystem.BLL.Interfaces.Business;
 using GymSystem.BLL.Specifications;
@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 namespace GymSystem.API.Controllers
 {
 
-	//إضافة مشترك
-	public class MembershipController : BaseApiController
+    //إضافة مشترك
+    public class MembershipController : BaseApiController
 	{
 		private readonly IMonthlyMembershipRepo _membershipRepo;
 
@@ -40,18 +40,18 @@ namespace GymSystem.API.Controllers
 		}
 
 		[Authorize(Roles = "Admin,Receptionist")]
-		[HttpGet("{id}")]
+		[HttpGet("{email}")]
 		[ProducesResponseType(StatusCodes.Status200OK)]
 		[ProducesResponseType(StatusCodes.Status400BadRequest)]
 		[ProducesResponseType(StatusCodes.Status404NotFound)]
 		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
-		public async Task<IActionResult> GetMembershipById(int id)
+		public async Task<IActionResult> GetMembershipByEmail(string email)
 		{
-			if (id <= 0)
+			if (email == null)
 			{
 				return BadRequest(new ApiValidationErrorResponse
 				{
-					Errors = new List<string> { "Membership ID must be a positive integer." },
+					Errors = new List<string> { "Membership email must Have a Value" },
 					StatusCode = 400,
 					Message = "Invalid request data"
 				});
@@ -59,10 +59,10 @@ namespace GymSystem.API.Controllers
 
 			try
 			{
-				var membership = await _membershipRepo.GetByIdAsync(id);
+				var membership = await _membershipRepo.GetByEmailAsync(email);
 				if (membership == null)
 				{
-					return NotFound(new ApiResponse(404, $"Membership with ID {id} not found"));
+					return NotFound(new ApiResponse(404, $"Membership with email {email} not found"));
 				}
 
 				return Ok(new ApiResponse(200, "Membership retrieved successfully", membership));
@@ -70,7 +70,7 @@ namespace GymSystem.API.Controllers
 			catch (Exception ex)
 			{
 				return StatusCode(StatusCodes.Status500InternalServerError,
-					new ApiExceptionResponse(500, $"An error occurred while retrieving membership with ID {id}", ex.Message));
+					new ApiExceptionResponse(500, $"An error occurred while retrieving membership with ID {email}", ex.Message));
 			}
 		}
 
@@ -79,7 +79,7 @@ namespace GymSystem.API.Controllers
 		[ProducesResponseType(StatusCodes.Status201Created)]
 		[ProducesResponseType(StatusCodes.Status400BadRequest)]
 		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
-		public async Task<IActionResult> CreateMembership([FromBody] MonthlyMembershipDto membershipDto)
+		public async Task<IActionResult> CreateMembership([FromBody] MonthlyMembershipCreateDto membershipDto)
 		{
 			if (!ModelState.IsValid || membershipDto == null)
 			{
@@ -110,18 +110,18 @@ namespace GymSystem.API.Controllers
 		}
 
 		[Authorize(Roles = "Admin,Receptionist")]
-		[HttpPut("{id}")]
+		[HttpPut("{email}")]
 		[ProducesResponseType(StatusCodes.Status200OK)]
 		[ProducesResponseType(StatusCodes.Status400BadRequest)]
 		[ProducesResponseType(StatusCodes.Status404NotFound)]
 		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
-		public async Task<IActionResult> UpdateMembership(int id, [FromBody] MonthlyMembershipDto membershipDto)
+		public async Task<IActionResult> UpdateMembership(string email, [FromBody] MonthlyMembershipCreateDto membershipDto)
 		{
-			if (id <= 0)
+			if (email == null)
 			{
 				return BadRequest(new ApiValidationErrorResponse
 				{
-					Errors = new List<string> { "Membership ID must be a positive integer." },
+					Errors = new List<string> { "Membership email must Have a Value" },
 					StatusCode = 400,
 					Message = "Invalid request data"
 				});
@@ -139,7 +139,7 @@ namespace GymSystem.API.Controllers
 
 			try
 			{
-				var response = await _membershipRepo.UpdateAsync(id, membershipDto);
+				var response = await _membershipRepo.UpdateAsync(email, membershipDto);
 				return response.StatusCode switch
 				{
 					200 => Ok(response),
@@ -152,23 +152,23 @@ namespace GymSystem.API.Controllers
 			catch (Exception ex)
 			{
 				return StatusCode(StatusCodes.Status500InternalServerError,
-					new ApiExceptionResponse(500, $"An error occurred while updating membership with ID {id}", ex.Message));
+					new ApiExceptionResponse(500, $"An error occurred while updating membership with ID {email}", ex.Message));
 			}
 		}
 
 		[Authorize(Roles = "Admin,Receptionist")]
-		[HttpDelete("{id}")]
+		[HttpDelete("{email}")]
 		[ProducesResponseType(StatusCodes.Status200OK)]
 		[ProducesResponseType(StatusCodes.Status400BadRequest)]
 		[ProducesResponseType(StatusCodes.Status404NotFound)]
 		[ProducesResponseType(StatusCodes.Status500InternalServerError)]
-		public async Task<IActionResult> DeleteMembership(int id)
+		public async Task<IActionResult> DeleteMembership(string email)
 		{
-			if (id <= 0)
+			if (email == null)
 			{
 				return BadRequest(new ApiValidationErrorResponse
 				{
-					Errors = new List<string> { "Membership ID must be a positive integer." },
+					Errors = new List<string> { "Membership email must Have a Value" },
 					StatusCode = 400,
 					Message = "Invalid request data"
 				});
@@ -176,7 +176,7 @@ namespace GymSystem.API.Controllers
 
 			try
 			{
-				var response = await _membershipRepo.DeleteAsync(id);
+				var response = await _membershipRepo.DeleteAsync(email);
 				return response.StatusCode switch
 				{
 					200 => Ok(response),
@@ -189,7 +189,7 @@ namespace GymSystem.API.Controllers
 			catch (Exception ex)
 			{
 				return StatusCode(StatusCodes.Status500InternalServerError,
-					new ApiExceptionResponse(500, $"An error occurred while deleting membership with ID {id}", ex.Message));
+					new ApiExceptionResponse(500, $"An error occurred while deleting membership with ID {email}", ex.Message));
 			}
 		}
 	}

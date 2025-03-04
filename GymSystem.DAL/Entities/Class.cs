@@ -27,7 +27,6 @@ namespace GymSystem.DAL.Entities
 		public ICollection<Attendance> Attendances { get; set; } = new List<Attendance>();
 		//======================
 
-		public ICollection<MonthlyMembership> MonthlyMemberships { get; set; } = new List<MonthlyMembership>();
 		public ICollection<DailyAttendance> DailyAttendances { get; set; } = new List<DailyAttendance>();
 
 		public ICollection<ClassEquipment> ClassEquipments { get; set; } = new List<ClassEquipment>();

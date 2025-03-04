@@ -42,11 +42,13 @@ namespace GymSystem.DAL.Identity
 		public DbSet<WorkoutPlan> WorkoutPlans { get; set; }
 
 		public DbSet<Equipment> Equipments { get; set; }
-		public DbSet<MonthlyMembership> monthlyMemberships { get; set; }
+		public DbSet<MonthlyMembershipp> monthlyMembership { get; set; }
 		public DbSet<DailyAttendance> dailyAttendances { get; set; }
 		public DbSet<Plan> Plans { get; set; }
 
 		public DbSet<EquipmentMaintenance> EquipmentMaintenances { get; set; }
 		public DbSet<ClassEquipment> ClassEquipments { get; set; }
+		public DbSet<Repair> Repairs { get; set; }
+		public DbSet<Product> Product { get; set; }
 	}
 }
